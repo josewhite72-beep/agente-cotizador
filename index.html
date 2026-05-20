@@ -31,16 +31,44 @@
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
 /* ── HEADER ── */
-header { background: var(--primary); color: #fff; padding: 0 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 16px rgba(0,0,0,.28); }
-.hdr { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 10px; }
+header { background: var(--primary); color: #fff; padding: 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 16px rgba(0,0,0,.28); }
+.hdr { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 10px; padding: 0 16px; }
 .logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .logo-icon { width: 34px; height: 34px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; color: #fff; }
 .logo-text { font-weight: 700; font-size: 14px; line-height: 1.2; }
 .logo-sub { font-size: 10px; opacity: .7; }
+/* Nav desktop */
 nav { display: flex; gap: 2px; }
 nav button { background: none; border: none; color: rgba(255,255,255,.7); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; transition: all .18s; white-space: nowrap; }
 nav button.active, nav button:hover { background: rgba(255,255,255,.18); color: #fff; }
+.btn-label { display: inline; }
 .cart-badge { background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: 3px; }
+/* Nav móvil: barra inferior fija */
+@media(max-width: 600px) {
+  header { box-shadow: none; }
+  .hdr { height: 48px; }
+  .logo-sub { display: none; }
+  nav { display: none; } /* se oculta del header */
+  .mobile-nav {
+    display: flex !important;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--primary); z-index: 200;
+    box-shadow: 0 -2px 12px rgba(0,0,0,.25);
+    border-top: 1px solid rgba(255,255,255,.1);
+  }
+  main { padding-bottom: 76px; }
+  .results-grid { grid-template-columns: 1fr; }
+}
+.mobile-nav { display: none; }
+.mobile-nav button {
+  flex: 1; background: none; border: none; color: rgba(255,255,255,.7);
+  padding: 8px 4px 10px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  font-size: 10px; font-weight: 600; transition: all .18s;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.mobile-nav button.active, .mobile-nav button:hover { color: #fff; background: rgba(255,255,255,.12); }
+.mobile-nav button .mn-icon { font-size: 20px; line-height: 1; }
+.mobile-nav button .mn-label { font-size: 9px; white-space: nowrap; }
 
 /* ── MAIN ── */
 main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
@@ -181,10 +209,10 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
       </div>
     </div>
     <nav>
-      <button class="active" onclick="nav('busqueda',this)">🔍 Buscar</button>
-      <button onclick="nav('solicitud',this)">🛒 Solicitud <span class="cart-badge" id="cart-badge">0</span></button>
-      <button onclick="nav('importar',this)">📥 Importar PDF</button>
-      <button onclick="nav('panamacompra',this)">🌐 PanamaCompra</button>
+      <button class="active" onclick="navTo('busqueda')">🔍 Buscar</button>
+      <button onclick="navTo('solicitud')">🛒 Solicitud <span class="cart-badge" id="cart-badge">0</span></button>
+      <button onclick="navTo('importar')">📥 Importar PDF</button>
+      <button onclick="navTo('panamacompra')">🌐 PanamaCompra</button>
     </nav>
   </div>
 </header>
@@ -230,7 +258,7 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     </div>
     <div class="actions">
       <button class="btn btn-green" id="btn-word" onclick="openModal()" disabled>📄 Generar Word</button>
-      <button class="btn btn-primary" onclick="nav('busqueda',document.querySelector('nav button'))">🔍 Seguir buscando</button>
+      <button class="btn btn-primary" onclick="navTo('busqueda')">🔍 Seguir buscando</button>
     </div>
   </div>
 </div>
@@ -315,6 +343,26 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     </div>
   </div>
 </div>
+
+<!-- Nav móvil inferior -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="active" onclick="navTo('busqueda')">
+    <span class="mn-icon">🔍</span>
+    <span class="mn-label">Buscar</span>
+  </button>
+  <button onclick="navTo('solicitud')">
+    <span class="mn-icon">🛒</span>
+    <span class="mn-label">Solicitud <span class="cart-badge" id="cart-badge-m">0</span></span>
+  </button>
+  <button onclick="navTo('importar')">
+    <span class="mn-icon">📥</span>
+    <span class="mn-label">Importar</span>
+  </button>
+  <button onclick="navTo('panamacompra')">
+    <span class="mn-icon">🌐</span>
+    <span class="mn-label">PanamaCompra</span>
+  </button>
+</nav>
 
 <div class="toast" id="toast"></div>
 

@@ -45,14 +45,25 @@ function getBanco() {
 }
 
 // ── NAVEGACIÓN ──────────────────────────────────────────────
-function nav(id, btn) {
+const NAV_IDS = ['busqueda', 'solicitud', 'importar', 'panamacompra'];
+
+function navTo(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  // Sincroniza nav desktop
+  document.querySelectorAll('header nav button').forEach((b, i) => {
+    b.classList.toggle('active', NAV_IDS[i] === id);
+  });
+  // Sincroniza nav móvil
+  document.querySelectorAll('#mobile-nav button').forEach((b, i) => {
+    b.classList.toggle('active', NAV_IDS[i] === id);
+  });
   document.getElementById('panel-' + id).classList.add('active');
-  btn.classList.add('active');
   if (id === 'busqueda') buscar();
   if (id === 'importar') renderStats();
 }
+
+// Alias para compatibilidad con llamadas internas
+function nav(id) { navTo(id); }
 
 // ── FILTROS DE CATEGORÍA ─────────────────────────────────────
 function buildFilters() {
@@ -160,6 +171,8 @@ function toggleCart(it, cardEl) {
 function updateBadge() {
   const n = Object.keys(cart).length;
   document.getElementById('cart-badge').textContent = n;
+  const m = document.getElementById('cart-badge-m');
+  if (m) m.textContent = n;
   document.getElementById('btn-word').disabled = n === 0;
 }
 
