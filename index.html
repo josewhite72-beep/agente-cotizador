@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a3d62">
+<title>CompraFácil – C.E. Barrigón</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --surface2: #e4eaf2;
+  --primary: #0a3d62;
+  --primary-l: #1565c0;
+  --accent: #e74c3c;
+  --green: #27ae60;
+  --green-l: #219a52;
+  --orange: #e67e22;
+  --text: #1a2332;
+  --text2: #4a5568;
+  --text3: #8896a5;
+  --border: #cdd8e6;
+  --shadow: 0 2px 12px rgba(10,61,98,.09);
+  --shadow-lg: 0 8px 32px rgba(10,61,98,.16);
+  --r: 12px; --r-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── HEADER ── */
+header { background: var(--primary); color: #fff; padding: 0 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 16px rgba(0,0,0,.28); }
+.hdr { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 10px; }
+.logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-icon { width: 34px; height: 34px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; color: #fff; }
+.logo-text { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.logo-sub { font-size: 10px; opacity: .7; }
+nav { display: flex; gap: 2px; }
+nav button { background: none; border: none; color: rgba(255,255,255,.7); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; transition: all .18s; white-space: nowrap; }
+nav button.active, nav button:hover { background: rgba(255,255,255,.18); color: #fff; }
+.cart-badge { background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: 3px; }
+
+/* ── MAIN ── */
+main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
+.panel { display: none; }
+.panel.active { display: block; }
+.page-title { margin-bottom: 16px; }
+.page-title h2 { font-size: 20px; font-weight: 700; color: var(--primary); }
+.page-title p { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+/* ── CARDS ── */
+.card { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); padding: 16px; margin-bottom: 14px; }
+.card-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
+
+/* ── BÚSQUEDA PRINCIPAL ── */
+.main-search-wrap { position: relative; margin-bottom: 14px; }
+.main-search { width: 100%; padding: 12px 16px 12px 44px; border: 2px solid var(--border); border-radius: var(--r); font-size: 15px; font-family: 'DM Sans', sans-serif; outline: none; transition: border .2s; background: #fff; }
+.main-search:focus { border-color: var(--primary-l); }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 18px; pointer-events: none; }
+.search-meta { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+.search-meta strong { color: var(--primary); }
+
+/* ── FILTROS ── */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.filter-btn { padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: #fff; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .18s; color: var(--text2); white-space: nowrap; }
+.filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ── RESULTS GRID ── */
+.results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 2px; }
+.results-grid::-webkit-scrollbar { width: 4px; }
+.results-grid::-webkit-scrollbar-thumb { background: #c5d0dc; border-radius: 4px; }
+.result-card { border: 1.5px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; cursor: pointer; transition: all .16s; background: #fff; position: relative; }
+.result-card:hover { border-color: var(--primary-l); box-shadow: var(--shadow); }
+.result-card.in-cart { border-color: var(--green); background: #f0faf4; }
+.result-card .rc-code { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text3); margin-bottom: 3px; }
+.result-card .rc-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+.result-card .rc-cat { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.result-card .rc-price { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--green); font-weight: 700; margin-top: 5px; }
+.result-card .rc-source { font-size: 10px; color: var(--text3); margin-top: 2px; font-style: italic; }
+.rc-check { position: absolute; top: 8px; right: 8px; color: var(--green); font-size: 15px; display: none; }
+.result-card.in-cart .rc-check { display: block; }
+.no-results { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; grid-column: 1/-1; }
+.tag-importado { display: inline-block; background: #fff3e0; color: #e65100; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: 6px; }
+
+/* ── CARRITO ── */
+.cart-table-wrap { overflow-x: auto; }
+.cart-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cart-table th { padding: 7px 10px; background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; text-align: left; white-space: nowrap; }
+.cart-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.cart-table tr:last-child td { border-bottom: none; }
+.cart-table tr:hover td { background: #f8fafc; }
+.qty-inp { width: 56px; padding: 4px 6px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; text-align: center; font-family: 'DM Sans', sans-serif; }
+.unit-inp { width: 80px; padding: 4px 6px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 12px; font-family: 'DM Sans', sans-serif; }
+.code-cell { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text3); }
+.btn-rm { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; transition: color .2s; }
+.btn-rm:hover { color: var(--accent); }
+.empty-cart { text-align: center; padding: 24px; color: var(--text3); font-size: 13px; }
+
+/* ── BOTONES ── */
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+.btn { padding: 9px 18px; border-radius: var(--r-sm); border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .18s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-l); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-l); }
+.btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-outline:hover { background: var(--primary); color: #fff; }
+.btn-danger { background: var(--accent); color: #fff; }
+.btn-orange { background: var(--orange); color: #fff; }
+.btn-orange:hover { filter: brightness(.9); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── IMPORTAR PDF ── */
+.drop-zone { border: 2px dashed var(--border); border-radius: var(--r); padding: 32px 20px; text-align: center; cursor: pointer; transition: all .2s; background: #fafcff; }
+.drop-zone.dragover { border-color: var(--primary-l); background: #f0f4ff; }
+.drop-zone-icon { font-size: 36px; margin-bottom: 10px; }
+.drop-zone p { font-size: 14px; color: var(--text2); }
+.drop-zone span { font-size: 12px; color: var(--text3); }
+#file-input { display: none; }
+.import-log { margin-top: 14px; max-height: 200px; overflow-y: auto; }
+.log-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+.log-ok { background: #f0faf4; color: #1b5e20; }
+.log-err { background: #fff3f2; color: #b71c1c; }
+.log-loading { background: #f0f4ff; color: var(--primary); }
+.log-icon { flex-shrink: 0; font-size: 15px; }
+.stats-bar { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
+.stat-card { background: var(--surface2); border-radius: var(--r-sm); padding: 10px 16px; flex: 1; min-width: 120px; }
+.stat-num { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--primary); }
+.stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ── BUSCAR PANAMACOMPRA ── */
+.pc-search { display: flex; gap: 8px; margin-bottom: 12px; }
+.pc-search input { flex: 1; padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; }
+.pc-search input:focus { border-color: var(--primary-l); }
+.pc-search select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
+.tip { background: #e8f4fd; border-left: 3px solid var(--primary-l); border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 10px 14px; font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+.link-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; transition: all .18s; }
+.link-card:hover { border-color: var(--primary-l); box-shadow: var(--shadow); }
+.link-info h4 { font-size: 13px; font-weight: 600; color: var(--primary); }
+.link-info p { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.link-query { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text3); margin-top: 4px; word-break: break-all; }
+.btn-link { padding: 6px 14px; background: var(--primary); color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+.btn-link:hover { background: var(--primary-l); }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: var(--r); width: 100%; max-width: 500px; box-shadow: var(--shadow-lg); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
+.modal-hdr { background: var(--primary); color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.modal-hdr h3 { font-size: 15px; font-weight: 700; }
+.modal-close { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+.modal-body { padding: 18px; overflow-y: auto; }
+.modal-ftr { padding: 12px 18px; background: #f8fafc; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+.fg { margin-bottom: 12px; }
+.fg label { display: block; font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.fg input, .fg select, .fg textarea { width: 100%; padding: 8px 11px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
+.fg input:focus, .fg select:focus { border-color: var(--primary-l); }
+.fg textarea { resize: vertical; min-height: 56px; font-size: 12px; }
+
+/* ── TOAST ── */
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a2332; color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 13px; font-weight: 500; z-index: 999; transition: transform .3s; pointer-events: none; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media(max-width:580px) {
+  nav button { padding: 5px 7px; font-size: 11px; }
+  .results-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-icon">CB</div>
+      <div>
+        <div class="logo-text">CompraFácil</div>
+        <div class="logo-sub">C.E. Barrigón · MEDUCA Coclé</div>
+      </div>
+    </div>
+    <nav>
+      <button class="active" onclick="nav('busqueda',this)">🔍 Buscar</button>
+      <button onclick="nav('solicitud',this)">🛒 Solicitud <span class="cart-badge" id="cart-badge">0</span></button>
+      <button onclick="nav('importar',this)">📥 Importar PDF</button>
+      <button onclick="nav('panamacompra',this)">🌐 PanamaCompra</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════ PANEL BÚSQUEDA ═══════ -->
+<div id="panel-busqueda" class="panel active">
+  <div class="page-title">
+    <h2>Buscar artículos</h2>
+    <p>Busca por nombre, categoría o código UNSPSC — incluye artículos importados de tus PDFs</p>
+  </div>
+
+  <div class="card">
+    <div class="main-search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="main-search" type="text" id="main-search"
+             placeholder="Ej: alimentos, plomería, aires acondicionados, papel higiénico…"
+             oninput="buscar()" autocomplete="off">
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="search-meta" id="search-meta"></div>
+    <div class="results-grid" id="results-grid">
+      <div class="no-results" style="padding:16px 0">Escribe para buscar en el banco de artículos</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ PANEL SOLICITUD ═══════ -->
+<div id="panel-solicitud" class="panel">
+  <div class="page-title">
+    <h2>Solicitud de Bienes</h2>
+    <p>Artículos agregados desde el buscador</p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="card-title" style="margin:0">Artículos en solicitud</div>
+      <button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="clearCart()">Limpiar todo</button>
+    </div>
+    <div id="cart-content">
+      <div class="empty-cart">Agrega artículos desde el buscador</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-green" id="btn-word" onclick="openModal()" disabled>📄 Generar Word</button>
+      <button class="btn btn-primary" onclick="nav('busqueda',document.querySelector('nav button'))">🔍 Seguir buscando</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ PANEL IMPORTAR ═══════ -->
+<div id="panel-importar" class="panel">
+  <div class="page-title">
+    <h2>Importar PDFs de PanamaCompra</h2>
+    <p>Sube Cuadros de Cotización — DeepSeek extrae artículos, códigos UNSPSC y precios</p>
+  </div>
+
+  <div class="card">
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="dzDrag(event,true)" ondragleave="dzDrag(event,false)" ondrop="dzDrop(event)">
+      <div class="drop-zone-icon">📄</div>
+      <p>Haz clic o arrastra PDFs aquí</p>
+      <span>Acepta uno o varios Cuadros de Cotización de PanamaCompra</span>
+    </div>
+    <input type="file" id="file-input" accept=".pdf" multiple onchange="handleFiles(this.files)">
+    <div class="import-log" id="import-log"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Estado del banco de datos</div>
+    <div class="stats-bar" id="stats-bar"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" onclick="clearImportados()" style="font-size:12px;padding:7px 14px">🗑 Borrar artículos importados</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ PANEL PANAMACOMPRA ═══════ -->
+<div id="panel-panamacompra" class="panel">
+  <div class="page-title">
+    <h2>Buscar en PanamaCompra</h2>
+    <p>Genera búsquedas optimizadas en Google hacia el portal oficial</p>
+  </div>
+  <div class="tip">💡 <strong>Tip:</strong> PanamaCompra no tiene buscador público directo. Estas búsquedas van a Google apuntando al portal para encontrar Cuadros de Cotización adjudicados, que luego puedes descargar e importar aquí.</div>
+  <div class="card">
+    <div class="pc-search">
+      <input type="text" id="pc-term" placeholder="Artículo a buscar…" oninput="buildPCLinks()" value="materiales de limpieza">
+      <select id="pc-entidad" onchange="buildPCLinks()">
+        <option value="Ministerio de Educación">MEDUCA</option>
+        <option value="MEDUCA Coclé">MEDUCA Coclé</option>
+        <option value="cualquier entidad pública">Cualquier entidad</option>
+        <option value="Caja de Seguro Social">CSS</option>
+        <option value="MINSA">MINSA</option>
+      </select>
+    </div>
+    <div id="pc-links"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══════ MODAL WORD ═══════ -->
+<div class="modal-overlay" id="word-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h3>📄 Configurar documento Word</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label>Fecha</label><input type="text" id="doc-fecha"></div>
+      <div class="fg"><label>Tipo de Fondo</label>
+        <select id="doc-fondo">
+          <option>Matrícula</option>
+          <option>Bienestar Estudiantil</option>
+          <option>Partida Extraordinaria</option>
+        </select>
+      </div>
+      <div class="fg"><label>Descripción de la compra</label>
+        <textarea id="doc-desc">Suministro de materiales para uso general del Centro Educativo Barrigón.</textarea>
+      </div>
+      <div class="fg"><label>Observación</label>
+        <textarea id="doc-obs">Estos productos deben ser entregados en el Centro Educativo Barrigón, corregimiento de El Harino, Distrito de La Pintada, Coclé.</textarea>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="generateWord()">⬇ Descargar Word</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
