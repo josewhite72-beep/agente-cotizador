@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#0a3d62">
 <title>CompraFácil – C.E. Barrigón</title>
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -69,6 +72,30 @@ nav button.active, nav button:hover { background: rgba(255,255,255,.18); color: 
 .mobile-nav button.active, .mobile-nav button:hover { color: #fff; background: rgba(255,255,255,.12); }
 .mobile-nav button .mn-icon { font-size: 20px; line-height: 1; }
 .mobile-nav button .mn-label { font-size: 9px; white-space: nowrap; }
+
+/* ── BRAND HEADER ── */
+.brand-header {
+  text-align: center;
+  padding: 18px 12px 10px;
+  margin-bottom: 4px;
+}
+.brand-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -.3px;
+}
+.brand-title span {
+  font-weight: 500;
+  color: var(--text2);
+}
+.brand-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+  font-style: italic;
+  letter-spacing: .03em;
+}
 
 /* ── MAIN ── */
 main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
@@ -221,6 +248,12 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
 
 <!-- ═══════ PANEL BÚSQUEDA ═══════ -->
 <div id="panel-busqueda" class="panel active">
+
+  <div class="brand-header">
+    <div class="brand-title">CompraFácil <span>· CEBG Barrigón</span></div>
+    <div class="brand-sub">By PanaMentorLabs · JoséWhite</div>
+  </div>
+
   <div class="page-title">
     <h2>Buscar artículos</h2>
     <p>Busca por nombre, categoría o código UNSPSC — incluye artículos importados de tus PDFs</p>
