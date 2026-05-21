@@ -265,6 +265,68 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a2332; color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 13px; font-weight: 500; z-index: 999; transition: transform .3s; pointer-events: none; white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* ── ÁRBOL DE CATEGORÍAS ── */
+.tree-nav { display: flex; flex-direction: column; gap: 6px; }
+.tree-cat {
+  border-radius: var(--r-sm); overflow: hidden;
+  border: 1.5px solid var(--border); background: #fff;
+}
+.tree-cat-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; cursor: pointer;
+  transition: background .15s; user-select: none;
+}
+.tree-cat-hdr:hover { background: #f0f4f8; }
+.tree-cat-hdr.open { background: var(--primary); color: #fff; }
+.tree-cat-icon { font-size: 20px; flex-shrink: 0; }
+.tree-cat-name { font-size: 14px; font-weight: 600; flex: 1; }
+.tree-cat-count { font-size: 11px; opacity: .7; }
+.tree-cat-arrow { font-size: 12px; transition: transform .2s; }
+.tree-cat-hdr.open .tree-cat-arrow { transform: rotate(90deg); }
+.tree-subs { display: none; padding: 6px 8px; background: #f8fafc;
+             border-top: 1px solid var(--border); flex-wrap: wrap; gap: 6px; }
+.tree-subs.open { display: flex; }
+.tree-sub-btn {
+  padding: 5px 12px; border-radius: 20px;
+  border: 1.5px solid var(--border); background: #fff;
+  font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  color: var(--text2); transition: all .15s; white-space: nowrap;
+}
+.tree-sub-btn:hover { border-color: var(--primary-l); color: var(--primary); }
+.tree-sub-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tree-sub-count { font-size: 10px; opacity: .7; margin-left: 2px; }
+.tree-back { display: none; align-items: center; gap: 8px; padding: 8px 4px;
+             font-size: 13px; font-weight: 600; color: var(--primary);
+             cursor: pointer; margin-bottom: 8px; }
+.tree-back.show { display: flex; }
+
+/* ── GESTIÓN DE CATEGORÍAS ── */
+.gcat-list { display: flex; flex-direction: column; gap: 8px; }
+.gcat-item {
+  border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  background: #fff; overflow: hidden;
+}
+.gcat-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer;
+}
+.gcat-hdr:hover { background: #f8fafc; }
+.gcat-icon-lbl { font-size: 18px; }
+.gcat-nombre { font-size: 13px; font-weight: 600; flex: 1; }
+.gcat-actions { display: flex; gap: 4px; }
+.gcat-btn { background: none; border: none; font-size: 15px; cursor: pointer; padding: 2px 5px; border-radius: 4px; transition: background .15s; }
+.gcat-btn:hover { background: #f0f4f8; }
+.gcat-subs-list { padding: 8px 12px; background: #f8fafc; border-top: 1px solid var(--border); display: none; flex-wrap: wrap; gap: 6px; }
+.gcat-subs-list.open { display: flex; align-items: center; }
+.gsub-chip { display: flex; align-items: center; gap: 4px; padding: 3px 8px 3px 10px;
+             background: #fff; border: 1.5px solid var(--border); border-radius: 20px; font-size: 12px; }
+.gsub-del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
+.gsub-del:hover { color: var(--accent); }
+.gadd-sub { padding: 3px 10px; border-radius: 20px; border: 1.5px dashed var(--border);
+            background: none; font-size: 12px; color: var(--text3); cursor: pointer;
+            font-family: 'DM Sans', sans-serif; }
+.gadd-sub:hover { border-color: var(--primary-l); color: var(--primary); }
+
 @media(max-width:580px) {
   nav button { padding: 5px 7px; font-size: 11px; }
   .results-grid { grid-template-columns: 1fr; }
@@ -284,10 +346,12 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     </div>
     <nav>
       <button class="active" onclick="navTo('busqueda')">🔍 Buscar</button>
+      <button onclick="navTo('categorias')">🗂 Categorías</button>
       <button onclick="navTo('solicitud')">🛒 Solicitud <span class="cart-badge" id="cart-badge">0</span></button>
       <button onclick="navTo('precios')">💰 Precios</button>
-      <button onclick="navTo('importar')">📥 Importar PDF</button>
+      <button onclick="navTo('importar')">📥 Importar</button>
       <button onclick="navTo('panamacompra')">🌐 PanamaCompra</button>
+      <button onclick="navTo('gestion')">⚙️ Categorías</button>
     </nav>
   </div>
 </header>
@@ -435,6 +499,40 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
 
 </main>
 
+<!-- ═══════ PANEL CATEGORÍAS ═══════ -->
+<div id="panel-categorias" class="panel">
+  <div class="page-title">
+    <h2>Explorar por categoría</h2>
+    <p>Toca una categoría → selecciona subcategoría → ve los artículos</p>
+  </div>
+  <div class="card">
+    <div class="tree-back" id="tree-back" onclick="treeBack()">
+      ← <span id="tree-back-label">Volver</span>
+    </div>
+    <div class="tree-nav" id="tree-nav"></div>
+    <div class="search-meta" id="tree-meta" style="margin-top:10px"></div>
+    <div class="results-grid" id="tree-results" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ═══════ PANEL GESTIÓN CATEGORÍAS ═══════ -->
+<div id="panel-gestion" class="panel">
+  <div class="page-title">
+    <h2>Gestión de Categorías</h2>
+    <p>Agrega, edita o elimina categorías y subcategorías</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="card-title" style="margin:0">Categorías activas</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-green" style="padding:6px 12px;font-size:12px" onclick="showAddCat()">+ Categoría</button>
+        <button class="btn btn-outline" style="padding:6px 12px;font-size:12px" onclick="resetCatsConfirm()">↺ Restaurar</button>
+      </div>
+    </div>
+    <div class="gcat-list" id="gcat-list"></div>
+  </div>
+</div>
+
 <!-- ═══════ MODAL WORD ═══════ -->
 <div class="modal-overlay" id="word-modal">
   <div class="modal">
@@ -471,6 +569,10 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     <span class="mn-icon">🔍</span>
     <span class="mn-label">Buscar</span>
   </button>
+  <button onclick="navTo('categorias')">
+    <span class="mn-icon">🗂</span>
+    <span class="mn-label">Categorías</span>
+  </button>
   <button onclick="navTo('solicitud')">
     <span class="mn-icon">🛒</span>
     <span class="mn-label">Solicitud <span class="cart-badge" id="cart-badge-m">0</span></span>
@@ -487,11 +589,16 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     <span class="mn-icon">🌐</span>
     <span class="mn-label">Panama</span>
   </button>
+  <button onclick="navTo('gestion')">
+    <span class="mn-icon">⚙️</span>
+    <span class="mn-label">Gestión</span>
+  </button>
 </nav>
 
 <div class="toast" id="toast"></div>
 
 <script src="data.js"></script>
+<script src="categorias.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

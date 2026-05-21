@@ -65,7 +65,7 @@ function getBanco() {
 }
 
 // ── NAVEGACIÓN ──────────────────────────────────────────────
-const NAV_IDS = ['busqueda', 'solicitud', 'precios', 'importar', 'panamacompra'];
+const NAV_IDS = ['busqueda', 'categorias', 'solicitud', 'precios', 'importar', 'panamacompra', 'gestion'];
 
 function navTo(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -78,8 +78,10 @@ function navTo(id) {
     b.classList.toggle('active', NAV_IDS[i] === id);
   });
   document.getElementById('panel-' + id).classList.add('active');
-  if (id === 'busqueda') { buildAZ(); buscar(); }
-  if (id === 'importar') renderStats();
+  if (id === 'busqueda')   { buildAZ(); buscar(); }
+  if (id === 'categorias') { buildTree(); }
+  if (id === 'importar')   { renderStats(); }
+  if (id === 'gestion')    { renderGestion(); }
 }
 
 // Alias para compatibilidad con llamadas internas
@@ -308,7 +310,11 @@ async function processPDF(file) {
     const resp = await fetch('/api/extract', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfText, fileName: file.name })
+      body: JSON.stringify({
+        pdfText,
+        fileName: file.name,
+        categoriasPrompt: getCategoriasParaPrompt()
+      })
     });
 
     if (!resp.ok) {
@@ -346,18 +352,20 @@ async function processPDF(file) {
 
       if (!existe && it.nombre) {
         importados.push({
-          codigo:       it.codigo        || '',
-          clasificacion:it.clasificacion || '',
-          nombre:       it.nombre,
-          descripcion:  it.descripcion   || '',
-          unidad:       it.unidad        || 'Unidad',
-          precio_ref:   precio,
-          categoria:    it.categoria     || 'Importado',
-          entidad:      data.entidad     || file.name,
-          proceso:      data.proceso     || '',
-          fecha:        data.fecha       || '',
-          importadoEn:  data.importadoEn || new Date().toISOString(),
-          origen:       'importado'
+          codigo:        it.codigo         || '',
+          clasificacion: it.clasificacion  || '',
+          nombre:        it.nombre,
+          descripcion:   it.descripcion    || '',
+          unidad:        it.unidad         || 'Unidad',
+          precio_ref:    precio,
+          precio_unitario: precio,
+          categoria:     it.categoria      || 'Otros',
+          subcategoria:  it.subcategoria   || 'Sin clasificar',
+          entidad:       data.entidad      || file.name,
+          proceso:       data.proceso      || '',
+          fecha:         data.fecha        || '',
+          importadoEn:   data.importadoEn  || new Date().toISOString(),
+          origen:        'importado'
         });
         nuevos++;
       }
@@ -715,6 +723,227 @@ function clearHistorial() {
   historialPrecios = [];
   localStorage.removeItem('cf_precios_hist');
   renderHistorial();
+}
+
+// ── ÁRBOL DE CATEGORÍAS ──────────────────────────────────────
+let treeState = { nivel: 'cats', catId: null, sub: null };
+
+function buildTree() {
+  treeState = { nivel: 'cats', catId: null, sub: null };
+  renderTree();
+}
+
+function renderTree() {
+  const nav    = document.getElementById('tree-nav');
+  const back   = document.getElementById('tree-back');
+  const meta   = document.getElementById('tree-meta');
+  const res    = document.getElementById('tree-results');
+  const cats   = getCategorias();
+  const banco  = getBanco();
+
+  res.innerHTML = '';
+  meta.innerHTML = '';
+
+  if (treeState.nivel === 'cats') {
+    back.classList.remove('show');
+    nav.innerHTML = '';
+    cats.forEach(cat => {
+      // Contar artículos en esta categoría
+      const total = banco.filter(i =>
+        (i.categoria || '').toLowerCase() === cat.nombre.toLowerCase()
+      ).length;
+
+      const div = document.createElement('div');
+      div.className = 'tree-cat';
+      div.innerHTML = `
+        <div class="tree-cat-hdr" onclick="treeSelectCat('${cat.id}')">
+          <span class="tree-cat-icon">${cat.icono}</span>
+          <span class="tree-cat-name">${cat.nombre}</span>
+          <span class="tree-cat-count">${total} artículo${total !== 1 ? 's' : ''}</span>
+          <span class="tree-cat-arrow">›</span>
+        </div>`;
+      nav.appendChild(div);
+    });
+
+  } else if (treeState.nivel === 'subs') {
+    const cat = cats.find(c => c.id === treeState.catId);
+    if (!cat) return;
+    back.classList.add('show');
+    document.getElementById('tree-back-label').textContent = 'Todas las categorías';
+    nav.innerHTML = '';
+
+    cat.subs.forEach(sub => {
+      const total = banco.filter(i =>
+        (i.categoria || '').toLowerCase() === cat.nombre.toLowerCase() &&
+        (i.subcategoria || '').toLowerCase() === sub.toLowerCase()
+      ).length;
+
+      const btn = document.createElement('button');
+      btn.className = 'tree-sub-btn';
+      btn.innerHTML = `${sub} <span class="tree-sub-count">(${total})</span>`;
+      btn.onclick = () => treeSelectSub(cat.id, sub);
+      nav.appendChild(btn);
+    });
+
+    // También botón "Ver todos"
+    const allBtn = document.createElement('button');
+    const totalCat = banco.filter(i =>
+      (i.categoria || '').toLowerCase() === cat.nombre.toLowerCase()
+    ).length;
+    allBtn.className = 'tree-sub-btn active';
+    allBtn.innerHTML = `Todos <span class="tree-sub-count">(${totalCat})</span>`;
+    allBtn.onclick = () => treeSelectSub(cat.id, 'all');
+    nav.insertBefore(allBtn, nav.firstChild);
+
+  } else if (treeState.nivel === 'items') {
+    const cat = cats.find(c => c.id === treeState.catId);
+    if (!cat) return;
+    back.classList.add('show');
+    document.getElementById('tree-back-label').textContent = cat.nombre;
+    nav.innerHTML = '';
+
+    let items = banco.filter(i =>
+      (i.categoria || '').toLowerCase() === cat.nombre.toLowerCase()
+    );
+    if (treeState.sub !== 'all') {
+      items = items.filter(i =>
+        (i.subcategoria || '').toLowerCase() === (treeState.sub || '').toLowerCase()
+      );
+    }
+    items.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+    meta.innerHTML = `<strong>${items.length}</strong> artículo${items.length !== 1 ? 's' : ''} en <strong>${treeState.sub === 'all' ? cat.nombre : treeState.sub}</strong>`;
+
+    if (!items.length) {
+      res.innerHTML = `<div class="no-results">No hay artículos en esta subcategoría.<br><span style="font-size:12px">Importa PDFs para agregar artículos.</span></div>`;
+      return;
+    }
+
+    items.forEach(it => {
+      const inCart = !!cart[itemKey(it)];
+      const div = document.createElement('div');
+      div.className = 'result-card' + (inCart ? ' in-cart' : '');
+      div.innerHTML = `
+        <span class="rc-check">✓</span>
+        <div class="rc-code">${it.codigo || '—'}${it.origen === 'importado' ? '<span class="tag-importado">PDF</span>' : ''}</div>
+        <div class="rc-name">${it.nombre}</div>
+        <div class="rc-cat">${it.subcategoria || it.clasificacion || it.categoria}</div>
+        ${it.precio_ref || it.precio_unitario
+          ? `<div class="rc-price">B/. ${Number(it.precio_ref || it.precio_unitario).toFixed(2)}<span style="font-size:10px;font-weight:400;color:var(--text3)"> / ${it.unidad}</span></div>`
+          : '<div class="rc-price" style="color:var(--text3);font-size:11px">Precio no disponible</div>'}
+        <div class="rc-source">${it.entidad || ''}</div>`;
+      div.onclick = () => toggleCart(it, div);
+      res.appendChild(div);
+    });
+  }
+}
+
+function treeSelectCat(catId) {
+  treeState = { nivel: 'subs', catId, sub: null };
+  renderTree();
+}
+
+function treeSelectSub(catId, sub) {
+  treeState = { nivel: 'items', catId, sub };
+  renderTree();
+}
+
+function treeBack() {
+  if (treeState.nivel === 'items') {
+    treeState = { nivel: 'subs', catId: treeState.catId, sub: null };
+  } else {
+    treeState = { nivel: 'cats', catId: null, sub: null };
+  }
+  renderTree();
+}
+
+// ── GESTIÓN DE CATEGORÍAS ─────────────────────────────────────
+function renderGestion() {
+  const list = document.getElementById('gcat-list');
+  const cats = getCategorias();
+  list.innerHTML = '';
+
+  cats.forEach(cat => {
+    const div = document.createElement('div');
+    div.className = 'gcat-item';
+    div.innerHTML = `
+      <div class="gcat-hdr" onclick="toggleGcatSubs('subs_${cat.id}')">
+        <span class="gcat-icon-lbl">${cat.icono}</span>
+        <span class="gcat-nombre">${cat.nombre}</span>
+        <div class="gcat-actions" onclick="event.stopPropagation()">
+          <button class="gcat-btn" title="Editar" onclick="showEditCat('${cat.id}')">✏️</button>
+          <button class="gcat-btn" title="Eliminar" onclick="deleteCatConfirm('${cat.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="gcat-subs-list" id="subs_${cat.id}">
+        ${cat.subs.map(s => `
+          <span class="gsub-chip">
+            ${s}
+            <button class="gsub-del" onclick="delSub('${cat.id}','${s.replace(/'/g,"\\'")}')">×</button>
+          </span>`).join('')}
+        <button class="gadd-sub" onclick="showAddSub('${cat.id}')">+ subcategoría</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleGcatSubs(id) {
+  document.getElementById(id)?.classList.toggle('open');
+}
+
+function showAddCat() {
+  const nombre = prompt('Nombre de la nueva categoría:');
+  if (!nombre?.trim()) return;
+  const icono = prompt('Ícono (emoji, opcional):', '📋') || '📋';
+  const nueva = addCategoria(nombre.trim(), icono.trim());
+  if (!nueva) { toast('⚠ Ya existe una categoría con ese nombre'); return; }
+  toast(`✅ Categoría "${nueva.nombre}" agregada`);
+  renderGestion();
+}
+
+function showEditCat(id) {
+  const cats  = getCategorias();
+  const cat   = cats.find(c => c.id === id);
+  if (!cat) return;
+  const nombre = prompt('Nuevo nombre:', cat.nombre);
+  if (!nombre?.trim()) return;
+  const icono  = prompt('Nuevo ícono:', cat.icono) || cat.icono;
+  editCategoria(id, nombre.trim(), icono.trim());
+  toast(`✅ Categoría actualizada`);
+  renderGestion();
+}
+
+function deleteCatConfirm(id) {
+  const cats = getCategorias();
+  const cat  = cats.find(c => c.id === id);
+  if (!cat) return;
+  if (!confirm(`¿Eliminar la categoría "${cat.nombre}"? Los artículos asignados quedarán sin categoría.`)) return;
+  deleteCategoria(id);
+  toast(`🗑 Categoría eliminada`);
+  renderGestion();
+}
+
+function showAddSub(catId) {
+  const sub = prompt('Nombre de la subcategoría:');
+  if (!sub?.trim()) return;
+  const ok = addSubcategoria(catId, sub.trim());
+  if (!ok) { toast('⚠ Ya existe esa subcategoría'); return; }
+  toast(`✅ Subcategoría "${sub.trim()}" agregada`);
+  renderGestion();
+}
+
+function delSub(catId, sub) {
+  if (!confirm(`¿Eliminar la subcategoría "${sub}"?`)) return;
+  deleteSubcategoria(catId, sub);
+  toast(`🗑 Subcategoría eliminada`);
+  renderGestion();
+}
+
+function resetCatsConfirm() {
+  if (!confirm('¿Restaurar todas las categorías a los valores originales? Se perderán tus cambios.')) return;
+  resetCategorias();
+  toast('✅ Categorías restauradas');
+  renderGestion();
 }
 
 // ── UTILIDADES ───────────────────────────────────────────────
