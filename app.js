@@ -563,14 +563,19 @@ async function generateWord() {
   toast('⏳ Generando documento Word…');
 
   try {
+    // Usar versión 7.8.2 que expone window.docx correctamente
     if (!window.docx) {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/build/index.min.js');
+      await loadScript('https://unpkg.com/docx@7.8.2/build/index.umd.js');
     }
+
+    // Compatibilidad con distintas formas de exposición del objeto
+    const docxLib = window.docx || window.DocxModule;
+    if (!docxLib) throw new Error('No se pudo cargar la librería docx');
 
     const {
       Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
       AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign
-    } = window.docx;
+    } = docxLib;
 
     const b  = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
     const bs = { top: b, bottom: b, left: b, right: b };
