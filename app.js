@@ -563,130 +563,175 @@ async function generateWord() {
   toast('⏳ Generando documento Word…');
 
   try {
-    // Usar versión 7.8.2 que expone window.docx correctamente
-    if (!window.docx) {
-      await loadScript('https://unpkg.com/docx@7.8.2/build/index.umd.js');
+    // Cargar JSZip (librería estable y bien soportada en browser)
+    if (!window.JSZip) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
     }
 
-    // Compatibilidad con distintas formas de exposición del objeto
-    const docxLib = window.docx || window.DocxModule;
-    if (!docxLib) throw new Error('No se pudo cargar la librería docx');
+    // ── Helpers XML ──────────────────────────────────────────
+    const esc = s => String(s || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 
-    const {
-      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-      AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign
-    } = docxLib;
+    const pt = n => Math.round(n * 20); // puntos → twips (1pt = 20 twips)
 
-    const b  = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
-    const bs = { top: b, bottom: b, left: b, right: b };
+    // Celda de tabla
+    const cell = (text, opts = {}) => {
+      const w     = opts.w     || 1000;
+      const bold  = opts.bold  ? '<w:b/><w:bCs/>' : '';
+      const shade = opts.shade ? `<w:shd w:val="clear" w:color="auto" w:fill="${opts.shade}"/>` : '';
+      const align = opts.align ? `<w:jc w:val="${opts.align}"/>` : '';
+      const sz    = opts.sz    ? `<w:sz w:val="${opts.sz * 2}"/><w:szCs w:val="${opts.sz * 2}"/>` : '<w:sz w:val="18"/><w:szCs w:val="18"/>';
+      return `<w:tc>
+        <w:tcPr>
+          <w:tcW w:w="${w}" w:type="dxa"/>
+          ${shade}
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+          </w:tcBorders>
+          <w:tcMar><w:top w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tcMar>
+        </w:tcPr>
+        <w:p><w:pPr>${align}<w:spacing w:before="0" w:after="0"/></w:pPr>
+        <w:r><w:rPr>${bold}${sz}<w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>
+        <w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p></w:tc>`;
+    };
 
-    // Columnas: R(460) | Cant(1000) | Unidad(1300) | Código(1260) | Descripción(4040) | P.Ref(1300)
+    // Fila de tabla
+    const row = cells => `<w:tr>${cells}</w:tr>`;
+
+    // Párrafo
+    const para = (runs, align = 'left', spaceBefore = 0, spaceAfter = 60) =>
+      `<w:p><w:pPr><w:jc w:val="${align}"/><w:spacing w:before="${spaceBefore}" w:after="${spaceAfter}"/></w:pPr>${runs}</w:p>`;
+
+    // Run de texto
+    const run = (text, opts = {}) => {
+      const bold = opts.bold ? '<w:b/><w:bCs/>' : '';
+      const sz   = opts.sz ? `<w:sz w:val="${opts.sz * 2}"/><w:szCs w:val="${opts.sz * 2}"/>` : '<w:sz w:val="20"/><w:szCs w:val="20"/>';
+      return `<w:r><w:rPr>${bold}${sz}<w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+    };
+
+    const blank = () => `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>`;
+
+    // ── Fila encabezado tabla ─────────────────────────────────
+    // Cols: R(460) Cant(1000) Unidad(1300) Código(1260) Descripción(4040) P.Ref(1300)
     const colW = [460, 1000, 1300, 1260, 4040, 1300];
-    const tW   = colW.reduce((a, v) => a + v, 0); // 9360
+    const hdr = row(
+      cell('R',             { w: colW[0], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Cantidad',      { w: colW[1], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Unidad',        { w: colW[2], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Código UNSPSC', { w: colW[3], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Descripción',   { w: colW[4], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('P. Ref. B/.',   { w: colW[5], bold: true, align: 'center', shade: 'D9D9D9' })
+    );
 
-    function tc(text, w, opts = {}) {
-      return new TableCell({
-        borders: bs,
-        width: { size: w, type: WidthType.DXA },
-        margins: { top: 60, bottom: 60, left: 90, right: 90 },
-        shading: opts.shading ? { fill: opts.shading, type: ShadingType.CLEAR } : undefined,
-        verticalAlign: VerticalAlign.CENTER,
-        children: [new Paragraph({
-          alignment: opts.align || AlignmentType.LEFT,
-          spacing: { before: 0, after: 0 },
-          children: [new TextRun({
-            text, font: "Arial",
-            size: opts.size || 17,
-            bold: opts.bold || false
-          })]
-        })]
-      });
-    }
+    const itemRowsXml = entries.map(e =>
+      row(
+        cell('',                                    { w: colW[0], align: 'center' }) +
+        cell(String(e.qty),                         { w: colW[1], align: 'center' }) +
+        cell(e.unit || '',                          { w: colW[2] }) +
+        cell(e.item.codigo || '',                   { w: colW[3], align: 'center' }) +
+        cell(e.item.nombre,                         { w: colW[4] }) +
+        cell(e.item.precio_ref || e.item.precio_unitario
+              ? Number(e.item.precio_ref || e.item.precio_unitario).toFixed(2) : '',
+              { w: colW[5], align: 'right' })
+      )
+    ).join('');
 
-    const hRow = new TableRow({ tableHeader: true, children: [
-      tc("R",               colW[0], { bold:true, align:AlignmentType.CENTER, shading:"D9D9D9" }),
-      tc("Cantidad",        colW[1], { bold:true, align:AlignmentType.CENTER, shading:"D9D9D9" }),
-      tc("Unidad",          colW[2], { bold:true, align:AlignmentType.CENTER, shading:"D9D9D9" }),
-      tc("Código UNSPSC",   colW[3], { bold:true, align:AlignmentType.CENTER, shading:"D9D9D9" }),
-      tc("Descripción",     colW[4], { bold:true, align:AlignmentType.CENTER, shading:"D9D9D9" }),
-      tc("P. Ref. B/.",     colW[5], { bold:true, align:AlignmentType.CENTER, shading:"D9D9D9" }),
-    ]});
+    const tW = colW.reduce((a, v) => a + v, 0);
+    const tabla = `<w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="${tW}" w:type="dxa"/>
+        <w:tblLook w:val="0000"/>
+      </w:tblPr>
+      <w:tblGrid>${colW.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>
+      ${hdr}${itemRowsXml}
+    </w:tbl>`;
 
-    const itemRows = entries.map(e => new TableRow({ children: [
-      tc("",                              colW[0], { align: AlignmentType.CENTER }),
-      tc(String(e.qty),                   colW[1], { align: AlignmentType.CENTER }),
-      tc(e.unit,                          colW[2]),
-      tc(e.item.codigo || "",             colW[3], { align: AlignmentType.CENTER }),
-      tc(e.item.nombre,                   colW[4]),
-      tc(e.item.precio_ref ? Number(e.item.precio_ref).toFixed(2) : "", colW[5], { align: AlignmentType.RIGHT }),
-    ]}));
+    // ── Fondo checkmark ──────────────────────────────────────
+    const fondoTexto =
+      fondo === 'Matrícula'
+        ? 'Matrícula  ✓                                    Bienestar Estudiantil      '
+        : fondo === 'Bienestar Estudiantil'
+        ? 'Matrícula               Bienestar Estudiantil  ✓'
+        : 'Matrícula               Bienestar Estudiantil      ';
+    const partida = fondo === 'Partida Extraordinaria'
+      ? 'Partida Extraordinaria  ✓'
+      : 'Partida Extraordinaria        ';
 
-    const table = new Table({
-      width: { size: tW, type: WidthType.DXA },
-      columnWidths: colW,
-      rows: [hRow, ...itemRows]
-    });
+    // ── Documento XML ────────────────────────────────────────
+    const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<w:body>
+  ${para(run('Formulario Nº 2', { sz: 9 }), 'right', 0, 60)}
+  ${para(run('MINISTERIO DE EDUCACIÓN', { bold: true, sz: 11 }) + run('    ', {}) + run('FONDO DE EQUIDAD Y CALIDAD DE LA EDUCACIÓN (FECE)', { bold: true, sz: 11 }), 'center', 0, 60)}
+  ${para(run('SOLICITUD DE BIENES Y/O SERVICIOS', { bold: true, sz: 12 }), 'center', 0, 60)}
+  ${para(run('Dirección Regional de Educación de Coclé', { bold: true, sz: 11 }), 'center', 0, 60)}
+  ${blank()}
+  ${para(run('Código del Centro Educativo:   201-0074     Fecha: ' + fecha), 'left', 0, 60)}
+  ${para(run('Nombre del Centro Educativo: Barrigón   _____________________________'), 'left', 0, 60)}
+  ${para(run('Zona 18'), 'left', 0, 60)}
+  ${para(run('Nombre del Director(a): ') + run('Yira Gómez', { bold: true }), 'left', 0, 60)}
+  ${blank()}
+  ${para(run('Fondo: ', { bold: true }) + run(fondoTexto), 'left', 0, 60)}
+  ${para(run(partida), 'left', 0, 60)}
+  ${blank()}
+  ${para(run('Descripción detallada de la compra de los bienes y/o servicios: ', { bold: true }) + run(desc), 'left', 0, 60)}
+  ${blank()}
+  ${tabla}
+  ${blank()}
+  ${para(run('* Precios de referencia de Cuadros de Cotización PanamaCompra (MEDUCA 2024-2026). Sujetos a variación.', { sz: 8 }), 'left', 0, 60)}
+  ${blank()}
+  ${para(run('Observación: ', { bold: true }) + run(obs), 'left', 0, 60)}
+  ${blank()}${blank()}${blank()}
+  ${para(run('___________________________________                  _______________________________', { bold: true }), 'left', 0, 60)}
+  ${para(run('        Director(a) del Centro Educativo                       Representante de la comunidad Educativa', { bold: true }), 'left', 0, 60)}
+  <w:sectPr>
+    <w:pgSz w:w="12240" w:h="15840"/>
+    <w:pgMar w:top="900" w:right="900" w:bottom="900" w:left="900" w:header="708" w:footer="708" w:gutter="0"/>
+  </w:sectPr>
+</w:body>
+</w:document>`;
 
-    const t  = (text, s, bold) => new TextRun({ text, font: "Arial", size: s || 20, bold: !!bold });
-    const p  = (children, align) => new Paragraph({ alignment: align || AlignmentType.LEFT, spacing: { before: 0, after: 60 }, children });
-    const bl = () => new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun("")] });
+    // ── Empacar como .docx (ZIP) ─────────────────────────────
+    const zip = new JSZip();
 
-    const doc = new Document({
-      styles: { default: { document: { run: { font: "Arial", size: 20 } } } },
-      sections: [{
-        properties: {
-          page: {
-            size: { width: 12240, height: 15840 },
-            margin: { top: 900, right: 900, bottom: 900, left: 900 }
-          }
-        },
-        children: [
-          p([t("Formulario Nº 2", 18)], AlignmentType.RIGHT),
-          p([t("MINISTERIO DE EDUCACIÓN", 22, true), t("    "), t("FONDO DE EQUIDAD Y CALIDAD DE LA EDUCACIÓN (FECE)", 22, true)], AlignmentType.CENTER),
-          p([t("SOLICITUD DE BIENES Y/O SERVICIOS", 24, true)], AlignmentType.CENTER),
-          p([t("Dirección Regional de Educación de Coclé", 22, true)], AlignmentType.CENTER),
-          bl(),
-          p([t("Código del Centro Educativo:   201-0074     Fecha: " + fecha)]),
-          p([t("Nombre del Centro Educativo: Barrigón   _____________________________")]),
-          p([t("Zona 18")]),
-          p([t("Nombre del Director(a): ", 20), t("Yira Gómez", 20, true)]),
-          bl(),
-          p([
-            t("Fondo: ", 20, true),
-            t(fondo === "Matrícula"          ? "Matrícula  ✓                                    Bienestar Estudiantil      " :
-              fondo === "Bienestar Estudiantil" ? "Matrícula               Bienestar Estudiantil  ✓" :
-              "Matrícula               Bienestar Estudiantil      ")
-          ]),
-          p([t(fondo === "Partida Extraordinaria" ? "Partida Extraordinaria  ✓" : "Partida Extraordinaria        ")]),
-          bl(),
-          p([t("Descripción detallada de la compra de los bienes y/o servicios: ", 20, true), t(desc)]),
-          bl(),
-          table,
-          bl(),
-          p([t("* Precios de referencia de Cuadros de Cotización PanamaCompra (MEDUCA 2024-2026). Sujetos a variación.", 15)]),
-          bl(),
-          p([t("Observación: ", 20, true), t(obs)]),
-          bl(), bl(), bl(),
-          p([t("___________________________________                  _______________________________", 20, true)]),
-          p([t("        Director(a) del Centro Educativo                       Representante de la comunidad Educativa", 20, true)]),
-        ]
-      }]
-    });
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml"  ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
 
-    const buffer = await Packer.toBuffer(doc);
-    const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    const url    = URL.createObjectURL(blob);
-    const a      = Object.assign(document.createElement('a'), {
-      href: url, download: `Solicitud_Barrigon_${fecha.replace(/\//g, '-')}.docx`
+    zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+
+    zip.file('word/document.xml', docXml);
+
+    zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`);
+
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), {
+      href: url,
+      download: `Solicitud_Barrigon_${fecha.replace(/\//g, '-')}.docx`
     });
     a.click();
     URL.revokeObjectURL(url);
     closeModal();
-    toast('✅ Word generado con código UNSPSC incluido');
+    toast('✅ Documento Word descargado');
 
   } catch(err) {
     console.error(err);
-    toast('❌ Error al generar Word: ' + err.message);
+    toast('❌ Error: ' + err.message);
   }
 }
 
