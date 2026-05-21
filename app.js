@@ -86,8 +86,6 @@ function navTo(id) {
 function nav(id) { navTo(id); }
 
 // ── ÍNDICE A-Z ─────────────────────────────────────────────
-let activeLetra = 'all';
-
 function buildAZ() {
   const container = document.getElementById('az-index');
   if (!container) return;
