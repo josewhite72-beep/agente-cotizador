@@ -19,45 +19,41 @@ export default async function handler(req, res) {
 
 Se te proporciona el texto extraído de un "Cuadro de Cotizaciones" de PanamaCompra.
 
-Tu tarea es extraer TODOS los artículos/ítems listados y devolver un JSON con esta estructura exacta:
+Tu tarea es extraer TODOS los artículos/ítems y devolver SOLO este JSON, sin texto adicional, sin markdown:
 
 {
   "entidad": "nombre de la entidad compradora",
-  "proceso": "número de proceso (ej: 2026-0-07-02-02-CM-055459)",
+  "proceso": "número de proceso",
   "fecha": "fecha de publicación",
   "items": [
     {
-      "codigo": "código UNSPSC de 8 dígitos (ej: 47131604)",
+      "codigo": "código UNSPSC de 8 dígitos",
       "clasificacion": "nombre de la clasificación UNSPSC",
-      "nombre": "nombre corto y claro del artículo (máx 80 chars)",
-      "descripcion": "descripción completa tal como aparece en el PDF",
+      "nombre": "nombre corto del artículo (máx 80 chars)",
       "cantidad": número o null,
       "unidad": "Unidad/Bulto/Caja/Galón/etc",
-      "precio_ref": número o null,
       "precio_unitario": número o null,
+      "monto_neto": número o null,
       "categoria": "categoría general del artículo"
     }
   ]
 }
 
-REGLAS CRÍTICAS SOBRE PRECIOS — LEE CON ATENCIÓN:
-- "precio_ref" = Precio de Referencia unitario que aparece en la columna "Precio Referencia" del PDF
-- "precio_unitario" = Precio Unitario adjudicado al proveedor (columna "Precio Unitario")
-- NUNCA uses el "Monto Neto" ni el "Total" — esos son precio × cantidad y NO son el precio unitario
-- Ejemplo correcto: si el PDF dice Cantidad=60, Precio Unitario=B/.2.50, Monto Neto=B/.150.00 → precio_unitario=2.50, NO 150.00
-- Si solo aparece el monto total y la cantidad, calcula: precio_unitario = monto_total / cantidad
-- Los precios unitarios de artículos de consumo escolar en Panamá raramente superan B/.50.00 por unidad
-- Si calculas un precio unitario mayor a B/.500, es casi seguro un error — revisa si tomaste el monto total
+INSTRUCCIÓN CRÍTICA SOBRE PRECIOS:
+- "precio_unitario" = el valor de la columna "Precio Unitario" del PDF. Es el precio de UNA sola unidad.
+- "monto_neto" = el valor de la columna "Monto Neto" del PDF. Es precio_unitario × cantidad.
+- Extrae AMBOS valores tal como aparecen en el PDF, sin calcular ni modificar nada.
+- Si una columna no existe o no tiene valor, usa null.
+- NO intercambies estos valores. NO calcules nada.
 
 OTRAS REGLAS:
-- Extrae TODOS los ítems sin omitir ninguno
-- El campo "nombre" debe ser corto y descriptivo (sin especificaciones técnicas largas)
-- Si un campo no existe en el PDF, usa null
-- El código UNSPSC siempre tiene 8 dígitos numéricos
-- Devuelve SOLO el JSON, sin texto adicional, sin markdown, sin explicaciones
+- Extrae TODOS los ítems sin omitir ninguno.
+- El código UNSPSC siempre tiene 8 dígitos numéricos.
+- Devuelve SOLO el JSON, sin texto adicional, sin markdown, sin explicaciones.
 
 TEXTO DEL PDF:
 ${pdfText.substring(0, 12000)}`;
+
 
   try {
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -90,6 +86,34 @@ ${pdfText.substring(0, 12000)}`;
       parsed = JSON.parse(clean);
     } catch(e) {
       return res.status(500).json({ error: 'DeepSeek devolvió JSON inválido', raw });
+    }
+
+    // ── POST-PROCESO: garantizar precio_unitario correcto ──
+    if (parsed.items && Array.isArray(parsed.items)) {
+      parsed.items = parsed.items.map(it => {
+        let pu = it.precio_unitario;
+        const mn = it.monto_neto;
+        const qty = it.cantidad;
+
+        // Si tenemos monto_neto y cantidad, calculamos el precio unitario real
+        if (mn && qty && qty > 0) {
+          const calculado = parseFloat((mn / qty).toFixed(4));
+          // Si precio_unitario es igual al monto_neto (error común) o no existe,
+          // usamos el calculado
+          if (!pu || Math.abs(pu - mn) < 0.01) {
+            pu = calculado;
+          }
+        }
+
+        // Si aún así el precio parece ser monto total (> 50 y hay cantidad > 1),
+        // dividimos como último recurso
+        if (pu && qty && qty > 1 && pu > 50) {
+          const posible = parseFloat((pu / qty).toFixed(4));
+          if (posible < 50) pu = posible;
+        }
+
+        return { ...it, precio_unitario: pu ? parseFloat(pu.toFixed(2)) : null };
+      });
     }
 
     // Agregar metadata del archivo
