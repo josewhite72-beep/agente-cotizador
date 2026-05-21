@@ -185,6 +185,39 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
 .stat-num { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--primary); }
 .stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
+/* ── PANEL PRECIOS ── */
+.precio-form { display: flex; gap: 8px; margin-bottom: 12px; }
+.precio-form input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; }
+.precio-form input:focus { border-color: var(--primary-l); }
+.precio-sugerencias { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sug-label { font-size: 11px; color: var(--text3); font-weight: 600; }
+.sug-btn { padding: 4px 10px; border-radius: 20px; border: 1.5px solid var(--border); background: #fff; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: var(--text2); transition: all .18s; }
+.sug-btn:hover { border-color: var(--primary-l); color: var(--primary); }
+
+.precio-card { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); padding: 18px; margin-bottom: 14px; border-left: 4px solid var(--green); }
+.precio-card.loading { border-left-color: var(--primary-l); }
+.precio-card.error { border-left-color: var(--accent); }
+.precio-articulo { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
+.precio-valores { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.precio-val-box { background: var(--surface2); border-radius: var(--r-sm); padding: 10px 16px; text-align: center; flex: 1; min-width: 90px; }
+.precio-val-num { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--green); }
+.precio-val-num.rango { font-size: 14px; }
+.precio-val-label { font-size: 10px; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+.precio-unidad { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.precio-notas { font-size: 13px; color: var(--text2); background: #f8fafc; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; line-height: 1.5; }
+.precio-fuentes { font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+.confianza-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.confianza-alta { background: #e8f5e9; color: #2e7d32; }
+.confianza-media { background: #fff8e1; color: #f57f17; }
+.confianza-baja { background: #fce4ec; color: #b71c1c; }
+.precio-disclaimer { font-size: 11px; color: var(--text3); font-style: italic; margin-top: 8px; }
+
+.hist-item { padding: 8px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 13px; cursor: pointer; transition: background .15s; }
+.hist-item:last-child { border-bottom: none; }
+.hist-item:hover { background: #f8fafc; }
+.hist-item .hist-name { color: var(--text); font-weight: 500; }
+.hist-item .hist-price { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--green); font-weight: 700; }
+
 /* ── BUSCAR PANAMACOMPRA ── */
 .pc-search { display: flex; gap: 8px; margin-bottom: 12px; }
 .pc-search input { flex: 1; padding: 9px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 14px; font-family: 'DM Sans', sans-serif; outline: none; }
@@ -238,6 +271,7 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     <nav>
       <button class="active" onclick="navTo('busqueda')">🔍 Buscar</button>
       <button onclick="navTo('solicitud')">🛒 Solicitud <span class="cart-badge" id="cart-badge">0</span></button>
+      <button onclick="navTo('precios')">💰 Precios</button>
       <button onclick="navTo('importar')">📥 Importar PDF</button>
       <button onclick="navTo('panamacompra')">🌐 PanamaCompra</button>
     </nav>
@@ -271,6 +305,45 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     <div class="results-grid" id="results-grid">
       <div class="no-results" style="padding:16px 0">Escribe para buscar en el banco de artículos</div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════ PANEL PRECIOS ═══════ -->
+<div id="panel-precios" class="panel">
+  <div class="page-title">
+    <h2>Consultar precios</h2>
+    <p>Estimados de mercado en Panamá · Powered by DeepSeek IA</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔎 ¿Cuánto cuesta en Panamá?</div>
+    <div class="precio-form">
+      <input type="text" id="precio-input"
+             placeholder="Ej: galón de cloro, resma de papel, tubo PVC 1/2..."
+             onkeydown="if(event.key==='Enter') consultarPrecio()">
+      <button class="btn btn-primary" onclick="consultarPrecio()" id="btn-consultar">
+        💰 Consultar
+      </button>
+    </div>
+    <div class="precio-sugerencias">
+      <span class="sug-label">Sugerencias:</span>
+      <button class="sug-btn" onclick="precioRapido('galón de cloro')">Cloro galón</button>
+      <button class="sug-btn" onclick="precioRapido('resma de papel bond')">Papel bond</button>
+      <button class="sug-btn" onclick="precioRapido('tubo PVC 1/2 pulgada')">Tubo PVC</button>
+      <button class="sug-btn" onclick="precioRapido('caja de tiza')">Caja de tiza</button>
+      <button class="sug-btn" onclick="precioRapido('galón de pintura')">Pintura galón</button>
+      <button class="sug-btn" onclick="precioRapido('foco LED 9W')">Foco LED</button>
+    </div>
+  </div>
+
+  <div id="precio-resultado"></div>
+
+  <div class="card" id="precio-historial-card" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="card-title" style="margin:0">📋 Consultas recientes</div>
+      <button class="btn btn-outline" style="padding:4px 10px;font-size:11px" onclick="clearHistorial()">Limpiar</button>
+    </div>
+    <div id="precio-historial"></div>
   </div>
 </div>
 
@@ -387,13 +460,17 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
     <span class="mn-icon">🛒</span>
     <span class="mn-label">Solicitud <span class="cart-badge" id="cart-badge-m">0</span></span>
   </button>
+  <button onclick="navTo('precios')">
+    <span class="mn-icon">💰</span>
+    <span class="mn-label">Precios</span>
+  </button>
   <button onclick="navTo('importar')">
     <span class="mn-icon">📥</span>
     <span class="mn-label">Importar</span>
   </button>
   <button onclick="navTo('panamacompra')">
     <span class="mn-icon">🌐</span>
-    <span class="mn-label">PanamaCompra</span>
+    <span class="mn-label">Panama</span>
   </button>
 </nav>
 

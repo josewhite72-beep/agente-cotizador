@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buildFilters();
   renderStats();
   buildPCLinks();
+  renderHistorial();
 
   // fecha de hoy en modal
   const hoy = new Date();
@@ -45,7 +46,7 @@ function getBanco() {
 }
 
 // ── NAVEGACIÓN ──────────────────────────────────────────────
-const NAV_IDS = ['busqueda', 'solicitud', 'importar', 'panamacompra'];
+const NAV_IDS = ['busqueda', 'solicitud', 'precios', 'importar', 'panamacompra'];
 
 function navTo(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -541,6 +542,124 @@ async function generateWord() {
     console.error(err);
     toast('❌ Error al generar Word: ' + err.message);
   }
+}
+
+// ── CONSULTA DE PRECIOS ──────────────────────────────────────
+let historialPrecios = JSON.parse(localStorage.getItem('cf_precios_hist') || '[]');
+
+function precioRapido(term) {
+  document.getElementById('precio-input').value = term;
+  consultarPrecio();
+}
+
+async function consultarPrecio() {
+  const input = document.getElementById('precio-input');
+  const articulo = input.value.trim();
+  if (!articulo) return;
+
+  const res = document.getElementById('precio-resultado');
+  const btn = document.getElementById('btn-consultar');
+
+  // Loading state
+  btn.disabled = true;
+  btn.textContent = '⏳ Consultando…';
+  res.innerHTML = `<div class="precio-card loading">
+    <div class="precio-articulo">🔍 Consultando precio de "${articulo}"…</div>
+    <div style="color:var(--text3);font-size:13px">DeepSeek está estimando el precio de mercado en Panamá…</div>
+  </div>`;
+
+  try {
+    const resp = await fetch('/api/precios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ articulo })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || `Error ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    renderPrecioResultado(data);
+
+    // Guardar en historial
+    const entrada = {
+      articulo: data.articulo || articulo,
+      precio: data.precio_estimado,
+      unidad: data.unidad,
+      ts: Date.now()
+    };
+    historialPrecios = [entrada, ...historialPrecios.filter(h => h.articulo !== entrada.articulo)].slice(0, 20);
+    localStorage.setItem('cf_precios_hist', JSON.stringify(historialPrecios));
+    renderHistorial();
+
+  } catch(err) {
+    res.innerHTML = `<div class="precio-card error">
+      <div class="precio-articulo">❌ Error al consultar</div>
+      <div style="color:var(--accent);font-size:13px">${err.message}</div>
+      <div style="color:var(--text3);font-size:12px;margin-top:6px">Verifica tu conexión o que la API key de DeepSeek esté configurada en Vercel.</div>
+    </div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💰 Consultar';
+  }
+}
+
+function renderPrecioResultado(d) {
+  const conf = d.confianza || 'media';
+  const confClass = { alta: 'confianza-alta', media: 'confianza-media', baja: 'confianza-baja' }[conf] || 'confianza-media';
+  const confLabel = { alta: '✓ Confianza alta', media: '~ Confianza media', baja: '⚠ Confianza baja' }[conf] || '~';
+
+  let valoresHTML = '';
+  if (d.precio_estimado) {
+    valoresHTML += `<div class="precio-val-box">
+      <div class="precio-val-num">B/. ${Number(d.precio_estimado).toFixed(2)}</div>
+      <div class="precio-val-label">Estimado</div>
+    </div>`;
+  }
+  if (d.precio_min && d.precio_max) {
+    valoresHTML += `<div class="precio-val-box">
+      <div class="precio-val-num rango">B/. ${Number(d.precio_min).toFixed(2)} – ${Number(d.precio_max).toFixed(2)}</div>
+      <div class="precio-val-label">Rango de mercado</div>
+    </div>`;
+  }
+  if (!valoresHTML) {
+    valoresHTML = `<div class="precio-val-box">
+      <div class="precio-val-num" style="color:var(--text3);font-size:14px">No disponible</div>
+      <div class="precio-val-label">Sin datos suficientes</div>
+    </div>`;
+  }
+
+  document.getElementById('precio-resultado').innerHTML = `
+    <div class="precio-card">
+      <div class="precio-articulo">${d.articulo || '—'}</div>
+      <div class="precio-valores">${valoresHTML}</div>
+      ${d.unidad ? `<div class="precio-unidad">📦 Unidad de referencia: <strong>${d.unidad}</strong></div>` : ''}
+      ${d.notas ? `<div class="precio-notas">💡 ${d.notas}</div>` : ''}
+      ${d.fuentes?.length ? `<div class="precio-fuentes">🏪 Fuentes: ${d.fuentes.join(', ')}</div>` : ''}
+      <span class="confianza-badge ${confClass}">${confLabel}</span>
+      ${d.fecha_referencia ? ` <span style="font-size:11px;color:var(--text3)">· Ref. ${d.fecha_referencia}</span>` : ''}
+      <div class="precio-disclaimer">⚠ Precio estimado por IA. Verifica antes de incluir en documentos oficiales.</div>
+    </div>`;
+}
+
+function renderHistorial() {
+  const card = document.getElementById('precio-historial-card');
+  const cont = document.getElementById('precio-historial');
+  if (!historialPrecios.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  cont.innerHTML = historialPrecios.map(h => `
+    <div class="hist-item" onclick="precioRapido('${h.articulo}')">
+      <span class="hist-name">${h.articulo}</span>
+      <span class="hist-price">${h.precio ? 'B/. ' + Number(h.precio).toFixed(2) : '—'} <span style="font-size:10px;font-weight:400;color:var(--text3)">/${h.unidad||'unidad'}</span></span>
+    </div>`).join('');
+}
+
+function clearHistorial() {
+  historialPrecios = [];
+  localStorage.removeItem('cf_precios_hist');
+  renderHistorial();
 }
 
 // ── UTILIDADES ───────────────────────────────────────────────
