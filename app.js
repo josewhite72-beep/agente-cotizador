@@ -56,6 +56,84 @@ function corregirPrecios() {
   }
 }
 
+function reclasificarBanco() {
+  // Mapa de nombres viejos → categoría/subcategoría correcta
+  const mapa = [
+    // Alimentos
+    { pat: /fruta|manzana|piña|mandarina|naranja|uva|melón|papaya|banano|guineo/i,        cat: "Alimentos",           sub: "Frutas" },
+    { pat: /vegetal|verdura|repollo|zanahoria|cebolla|tomate|lechuga|apio|pepino|papa|yuca|ñame|otoe/i, cat: "Alimentos", sub: "Verduras" },
+    { pat: /arroz|frijol|lenteja|garbanzo|maíz|trigo|avena|cereal|grano/i,               cat: "Alimentos",           sub: "Granos y legumbres" },
+    { pat: /leche|queso|yogur|mantequilla|lácteo|crema/i,                                 cat: "Alimentos",           sub: "Lácteos" },
+    { pat: /carne|pollo|res|cerdo|pescado|atún|sardina|chorizo|jamón|embutido/i,          cat: "Alimentos",           sub: "Carnes y aves" },
+    { pat: /aceite|vinagre|sal|azúcar|salsa|ketchup|mayonesa|mostaza|condimento|especia/i,cat: "Alimentos",           sub: "Condimentos" },
+    { pat: /galleta|snack|bocadillo|chips|pastel|dulce|caramelo|chocolate/i,              cat: "Alimentos",           sub: "Snacks" },
+    { pat: /jugo|refresco|agua|bebida|leche en polvo/i,                                   cat: "Alimentos",           sub: "Bebidas" },
+    { pat: /pasta|fideos|espagueti|macarrón/i,                                            cat: "Alimentos",           sub: "Granos y legumbres" },
+    // Limpieza y Aseo
+    { pat: /cloro|blanqueador|desinfectante|ácido|alcohol|potasa|saca.?gras|desgrasador|kangarú/i, cat: "Limpieza y Aseo", sub: "Químicos y desinfectantes" },
+    { pat: /detergente|jabón|lavaplatos|lavandería|suavizante/i,                          cat: "Limpieza y Aseo",     sub: "Detergentes y jabones" },
+    { pat: /escoba|trapeador|moña|recogedor|cepillo|balde|cubo|exprimidor|mopa|limpión|bayeta/i, cat: "Limpieza y Aseo", sub: "Utensilios de limpieza" },
+    { pat: /bolsa.*(basura|plástico)|basura.*bolsa/i,                                     cat: "Limpieza y Aseo",     sub: "Bolsas de basura" },
+    { pat: /papel.*(higiénico|toalla)|toalla.*papel|servilleta|dispensador.*papel/i,      cat: "Limpieza y Aseo",     sub: "Papel e higiene" },
+    { pat: /ambientador|desodorante.*ambiental|aromatizante|pastilla.*olor/i,             cat: "Limpieza y Aseo",     sub: "Aromatizantes" },
+    // Mantenimiento
+    { pat: /tubo|pvc|llave.*agua|grifo|plomería|válvula|codo|tee|adaptador.*pvc/i,       cat: "Mantenimiento",       sub: "Plomería" },
+    { pat: /cable.*eléctrico|enchufe|tomacorriente|foco|bombillo|interruptor|breaker/i,   cat: "Mantenimiento",       sub: "Electricidad" },
+    { pat: /pintura|brocha|rodillo|sellador|barniz|lija/i,                                cat: "Mantenimiento",       sub: "Pintura" },
+    { pat: /martillo|destornillador|llave.*tuerca|herramienta|taladro|serrucho/i,         cat: "Mantenimiento",       sub: "Herramientas" },
+    { pat: /manguera|jardín|pala|rastrillo|semilla|abono|fertilizante/i,                  cat: "Mantenimiento",       sub: "Jardinería" },
+    { pat: /cemento|bloque|arena|varilla|construcción|material.*construc/i,               cat: "Mantenimiento",       sub: "Materiales de construcción" },
+    // Materiales Escolares
+    { pat: /papel.*bond|cuaderno|folder|archivador|cartulina|papelería/i,                 cat: "Materiales Escolares",sub: "Papelería" },
+    { pat: /lápiz|bolígrafo|pluma|marcador|borrador|tijera|regla|útil/i,                  cat: "Materiales Escolares",sub: "Útiles de escritorio" },
+    { pat: /tiza|pizarra|pizarrón|marcador.*pizarra|didáctico/i,                          cat: "Materiales Escolares",sub: "Didácticos" },
+    { pat: /silla|escritorio|mesa|pupitres|mobiliario|estante/i,                          cat: "Materiales Escolares",sub: "Mobiliario" },
+    { pat: /computadora|impresora|tóner|cartucho|tecnología|usb|cable.*datos/i,           cat: "Materiales Escolares",sub: "Tecnología" },
+    // Salud
+    { pat: /mascarilla|guante.*látex|protección.*personal|casco|lente.*seguridad/i,       cat: "Salud y Protección",  sub: "Protección personal" },
+    { pat: /venda|gasa|algodón|agua.*oxigenada|primeros.*auxilios|botiquín/i,             cat: "Salud y Protección",  sub: "Primeros auxilios" },
+    { pat: /jabón.*manos|gel.*antibacterial|higiene.*personal/i,                          cat: "Salud y Protección",  sub: "Higiene personal" },
+    // Equipos
+    { pat: /aire.*acondicionado|split|condensadora/i,                                     cat: "Equipos y Servicios", sub: "Aires acondicionados" },
+    { pat: /bocina|micrófono|proyector|televisor|electrónica/i,                           cat: "Equipos y Servicios", sub: "Electrónica" },
+    // Deportivos
+    { pat: /balón|pelota|fútbol|baloncesto|voleibol|béisbol/i,                            cat: "Implementos Deportivos", sub: "Balones" },
+    { pat: /uniforme.*deport|camiseta.*deport|short.*deport/i,                            cat: "Implementos Deportivos", sub: "Uniformes" },
+    // Musicales
+    { pat: /guitarra|cuatro|violín|instrumento.*cuerda/i,                                 cat: "Instrumentos Musicales", sub: "Cuerdas" },
+    { pat: /flauta|trompeta|instrumento.*viento/i,                                        cat: "Instrumentos Musicales", sub: "Viento" },
+    { pat: /tambor|caja.*china|percusión|instrumento.*percusión/i,                        cat: "Instrumentos Musicales", sub: "Percusión" },
+  ];
+
+  let reclasificados = 0;
+  const cats = getCategorias();
+  const catNombres = cats.map(c => c.nombre.toLowerCase());
+
+  importados = importados.map(it => {
+    // Si ya tiene una categoría válida del árbol actual, no tocar
+    const yaValida = catNombres.includes((it.categoria || '').toLowerCase());
+    if (yaValida && it.subcategoria) return it;
+
+    // Buscar en el mapa por nombre del artículo
+    const texto = `${it.nombre} ${it.clasificacion || ''} ${it.categoria || ''}`;
+    for (const m of mapa) {
+      if (m.pat.test(texto)) {
+        reclasificados++;
+        return { ...it, categoria: m.cat, subcategoria: m.sub };
+      }
+    }
+    // Si no encontró coincidencia, dejar en Otros
+    if (!yaValida) {
+      return { ...it, categoria: 'Otros', subcategoria: 'Sin clasificar' };
+    }
+    return it;
+  });
+
+  saveImportados();
+  renderStats();
+  toast(`✅ ${reclasificados} artículo${reclasificados !== 1 ? 's' : ''} reclasificado${reclasificados !== 1 ? 's' : ''}`);
+}
+
 // ── BANCO COMPLETO (base + importados) ──────────────────────
 function getBanco() {
   // Combina banco base con importados, marcando origen
