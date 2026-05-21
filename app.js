@@ -3,14 +3,14 @@
 // ═══════════════════════════════════════════════════════════
 
 // ── ESTADO ──────────────────────────────────────────────────
-let cart = {};             // { id: { item, qty, unit } }
-let activeFilter = 'all';
-let importados = [];       // artículos importados de PDFs (persisten en localStorage)
+let cart = {};
+let importados = [];
+let activeLetra = 'all';
 
 // ── INIT ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadImportados();
-  buildFilters();
+  buildAZ();
   renderStats();
   buildPCLinks();
   renderHistorial();
@@ -28,6 +28,7 @@ function loadImportados() {
 }
 function saveImportados() {
   localStorage.setItem('cf_importados', JSON.stringify(importados));
+  buildAZ();
 }
 function clearImportados() {
   if (!confirm('¿Eliminar todos los artículos importados de PDFs? El banco base se mantiene.')) return;
@@ -77,37 +78,55 @@ function navTo(id) {
     b.classList.toggle('active', NAV_IDS[i] === id);
   });
   document.getElementById('panel-' + id).classList.add('active');
-  if (id === 'busqueda') buscar();
+  if (id === 'busqueda') { buildAZ(); buscar(); }
   if (id === 'importar') renderStats();
 }
 
 // Alias para compatibilidad con llamadas internas
 function nav(id) { navTo(id); }
 
-// ── FILTROS DE CATEGORÍA ─────────────────────────────────────
-function buildFilters() {
-  const container = document.getElementById('filters');
-  const cats = [...new Set(getBanco().map(i => i.categoria))].sort();
+// ── ÍNDICE A-Z ─────────────────────────────────────────────
+let activeLetra = 'all';
+
+function buildAZ() {
+  const container = document.getElementById('az-index');
+  if (!container) return;
+
+  const banco = getBanco();
+  // Letras que tienen al menos un artículo
+  const letrasConArticulos = new Set(
+    banco.map(i => i.nombre.trim()[0].toUpperCase())
+         .filter(l => /[A-Z]/.test(l))
+  );
+
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   container.innerHTML = '';
 
-  const all = Object.assign(document.createElement('button'), {
-    className: 'filter-btn active', textContent: 'Todos'
-  });
-  all.onclick = () => setFilter('all', all);
+  // Botón "Todos"
+  const all = document.createElement('button');
+  all.className = 'az-btn all' + (activeLetra === 'all' ? ' active' : '');
+  all.textContent = 'Todos';
+  all.onclick = () => setLetra('all', all);
   container.appendChild(all);
 
-  cats.forEach(cat => {
-    const btn = Object.assign(document.createElement('button'), {
-      className: 'filter-btn', textContent: cat
-    });
-    btn.onclick = () => setFilter(cat, btn);
+  // Botones A-Z
+  letras.forEach(l => {
+    const btn = document.createElement('button');
+    const tieneArticulos = letrasConArticulos.has(l);
+    btn.className = 'az-btn' +
+      (activeLetra === l ? ' active' : '') +
+      (!tieneArticulos ? ' disabled' : '');
+    btn.textContent = l;
+    if (tieneArticulos) btn.onclick = () => setLetra(l, btn);
     container.appendChild(btn);
   });
 }
 
-function setFilter(val, btn) {
-  activeFilter = val;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+function setLetra(letra, btn) {
+  activeLetra = letra;
+  // Limpiar búsqueda de texto al tocar letra
+  document.getElementById('main-search').value = '';
+  document.querySelectorAll('.az-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   buscar();
 }
@@ -120,33 +139,36 @@ function buscar() {
   const meta  = document.getElementById('search-meta');
 
   let results = banco.filter(it => {
-    const matchCat = activeFilter === 'all' || it.categoria === activeFilter;
-    const matchQ   = !q ||
+    // Filtro por letra A-Z (solo si no hay texto escrito)
+    const matchLetra = q
+      ? true
+      : activeLetra === 'all' || it.nombre.trim().toUpperCase().startsWith(activeLetra);
+    // Filtro por texto
+    const matchQ = !q ||
       it.nombre.toLowerCase().includes(q) ||
       it.categoria.toLowerCase().includes(q) ||
       (it.clasificacion || '').toLowerCase().includes(q) ||
       (it.codigo || '').includes(q) ||
       (it.descripcion || '').toLowerCase().includes(q);
-    return matchCat && matchQ;
+    return matchLetra && matchQ;
   });
 
-  // Ordenar: primero los que hacen match en nombre, luego resto
-  if (q) {
-    results.sort((a, b) => {
-      const aName = a.nombre.toLowerCase().includes(q) ? 0 : 1;
-      const bName = b.nombre.toLowerCase().includes(q) ? 0 : 1;
-      return aName - bName;
-    });
-  }
+  // Ordenar alfabéticamente
+  results.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
-  meta.innerHTML = q
-    ? `<strong>${results.length}</strong> resultado${results.length !== 1 ? 's' : ''} para "<strong>${q}</strong>"`
-    : `<strong>${banco.length}</strong> artículos en el banco (${importados.length} importados)`;
+  // Meta info
+  if (q) {
+    meta.innerHTML = `<strong>${results.length}</strong> resultado${results.length !== 1 ? 's' : ''} para "<strong>${q}</strong>"`;
+  } else if (activeLetra !== 'all') {
+    meta.innerHTML = `<strong>${results.length}</strong> artículo${results.length !== 1 ? 's' : ''} con <strong>${activeLetra}</strong>`;
+  } else {
+    meta.innerHTML = `<strong>${banco.length}</strong> artículos en el banco · <strong>${importados.length}</strong> importados`;
+  }
 
   if (!results.length) {
     grid.innerHTML = `<div class="no-results">
-      No se encontraron artículos para "<strong>${q}</strong>".<br>
-      <span style="font-size:12px">Puedes importar PDFs de PanamaCompra para ampliar el banco.</span>
+      No se encontraron artículos${q ? ` para "<strong>${q}</strong>"` : ''}.
+      <br><span style="font-size:12px">Importa más PDFs de PanamaCompra para ampliar el banco.</span>
     </div>`;
     return;
   }
@@ -344,7 +366,6 @@ async function processPDF(file) {
     });
 
     saveImportados();
-    buildFilters();
     renderStats();
     updateLog(logId, 'ok',
       `✅ "${file.name}" — ${data.items.length} ítems encontrados, ${nuevos} nuevos agregados al banco`);
