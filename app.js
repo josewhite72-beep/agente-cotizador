@@ -307,12 +307,20 @@ async function processPDF(file) {
       const existe = importados.some(i => (i.codigo || '') + '_' + (i.nombre || '') === key) ||
                      BANCO_BASE.some(i => (i.codigo || '') + '_' + (i.nombre || '') === key);
 
-      // Validación de sanidad del precio: para compras escolares en Panamá
-      // ningún artículo unitario debería superar B/.500 normalmente
-      // Si el precio parece inflado 100x, lo dividimos entre 100
+      // Validación de sanidad del precio
+      // Si el precio parece ser el monto total (precio > 50 y hay cantidad),
+      // intentar recalcular el precio unitario
       let precio = it.precio_ref || it.precio_unitario || null;
+      if (precio && it.cantidad && it.cantidad > 1) {
+        const posibleUnitario = parseFloat((precio / it.cantidad).toFixed(2));
+        // Si dividir entre la cantidad da un resultado más razonable (< precio/2),
+        // es probable que se haya tomado el monto total
+        if (precio > 50 && posibleUnitario < precio * 0.3) {
+          precio = posibleUnitario;
+        }
+      }
+      // Fallback: si aún supera B/.500 dividir entre 100
       if (precio && precio > 500) {
-        // Probable error de escala (ej: 150 en lugar de 1.50)
         precio = parseFloat((precio / 100).toFixed(2));
       }
 
