@@ -40,11 +40,18 @@ Tu tarea es extraer TODOS los artículos/ítems listados y devolver un JSON con 
   ]
 }
 
-REGLAS IMPORTANTES:
+REGLAS CRÍTICAS SOBRE PRECIOS — LEE CON ATENCIÓN:
+- "precio_ref" = Precio de Referencia unitario que aparece en la columna "Precio Referencia" del PDF
+- "precio_unitario" = Precio Unitario adjudicado al proveedor (columna "Precio Unitario")
+- NUNCA uses el "Monto Neto" ni el "Total" — esos son precio × cantidad y NO son el precio unitario
+- Ejemplo correcto: si el PDF dice Cantidad=60, Precio Unitario=B/.2.50, Monto Neto=B/.150.00 → precio_unitario=2.50, NO 150.00
+- Si solo aparece el monto total y la cantidad, calcula: precio_unitario = monto_total / cantidad
+- Los precios unitarios de artículos de consumo escolar en Panamá raramente superan B/.50.00 por unidad
+- Si calculas un precio unitario mayor a B/.500, es casi seguro un error — revisa si tomaste el monto total
+
+OTRAS REGLAS:
 - Extrae TODOS los ítems sin omitir ninguno
 - El campo "nombre" debe ser corto y descriptivo (sin especificaciones técnicas largas)
-- "precio_ref" es el Precio Referencia del ítem en la solicitud
-- "precio_unitario" es el Precio Unitario adjudicado al proveedor (si existe)
 - Si un campo no existe en el PDF, usa null
 - El código UNSPSC siempre tiene 8 dígitos numéricos
 - Devuelve SOLO el JSON, sin texto adicional, sin markdown, sin explicaciones
