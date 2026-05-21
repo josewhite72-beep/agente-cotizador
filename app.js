@@ -37,6 +37,24 @@ function clearImportados() {
   toast('🗑 Artículos importados eliminados');
 }
 
+function corregirPrecios() {
+  let corregidos = 0;
+  importados = importados.map(it => {
+    if (it.precio_ref && it.precio_ref > 500) {
+      corregidos++;
+      return { ...it, precio_ref: parseFloat((it.precio_ref / 100).toFixed(2)) };
+    }
+    return it;
+  });
+  saveImportados();
+  renderStats();
+  if (corregidos > 0) {
+    toast(`🔧 ${corregidos} precio${corregidos > 1 ? 's' : ''} corregido${corregidos > 1 ? 's' : ''}`);
+  } else {
+    toast('✅ No se encontraron precios inflados');
+  }
+}
+
 // ── BANCO COMPLETO (base + importados) ──────────────────────
 function getBanco() {
   // Combina banco base con importados, marcando origen
@@ -288,6 +306,16 @@ async function processPDF(file) {
       const key = (it.codigo || '') + '_' + (it.nombre || '');
       const existe = importados.some(i => (i.codigo || '') + '_' + (i.nombre || '') === key) ||
                      BANCO_BASE.some(i => (i.codigo || '') + '_' + (i.nombre || '') === key);
+
+      // Validación de sanidad del precio: para compras escolares en Panamá
+      // ningún artículo unitario debería superar B/.500 normalmente
+      // Si el precio parece inflado 100x, lo dividimos entre 100
+      let precio = it.precio_ref || it.precio_unitario || null;
+      if (precio && precio > 500) {
+        // Probable error de escala (ej: 150 en lugar de 1.50)
+        precio = parseFloat((precio / 100).toFixed(2));
+      }
+
       if (!existe && it.nombre) {
         importados.push({
           codigo:       it.codigo        || '',
@@ -295,7 +323,7 @@ async function processPDF(file) {
           nombre:       it.nombre,
           descripcion:  it.descripcion   || '',
           unidad:       it.unidad        || 'Unidad',
-          precio_ref:   it.precio_ref    || it.precio_unitario || null,
+          precio_ref:   precio,
           categoria:    it.categoria     || 'Importado',
           entidad:      data.entidad     || file.name,
           proceso:      data.proceso     || '',
