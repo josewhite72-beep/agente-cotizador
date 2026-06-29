@@ -83,6 +83,9 @@ const NOMBRES_FECE = {
 
 function getCodigoFECE(item) {
   if (!item) return '';
+  // Prioridad 1: campo explícito objeto_gasto en el dato (BANCO_BASE revisado manualmente)
+  if (item.objeto_gasto) return item.objeto_gasto;
+  // Prioridad 2: inferencia por subcategoria/categoria (artículos importados sin objeto_gasto aún)
   return MAPEO_FECE[item.subcategoria] || MAPEO_FECE[item.categoria] || '';
 }
 
@@ -216,6 +219,25 @@ function reclasificarBanco() {
   saveImportados();
   renderStats();
   toast(`✅ ${reclasificados} artículo${reclasificados !== 1 ? 's' : ''} reclasificado${reclasificados !== 1 ? 's' : ''}`);
+}
+
+// ── EXPORTAR ARTÍCULOS IMPORTADOS (cf_importados) ───────────
+function exportarImportados() {
+  if (!importados.length) {
+    toast('⚠️ No hay artículos importados para exportar');
+    return;
+  }
+  const fecha = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(importados, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cf_importados_${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast(`📥 ${importados.length} artículos exportados`);
 }
 
 // ── BANCO COMPLETO (base + importados) ──────────────────────
