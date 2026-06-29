@@ -3,38 +3,52 @@
 // ═══════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════
-// MAPEO CÓDIGO DE OBJETO DE GASTO (FECE) — por categoría
+// MAPEO CÓDIGO DE OBJETO DE GASTO (FECE)
 // Basado en Anexo Nº 1, Manual de Procedimientos FECE (2006)
+// Cubre dos sistemas de categorización que coexisten en CompraFácil:
+//  1) BANCO_BASE (data.js): usa campo "categoria" plano (ej. "Papelería")
+//  2) Artículos importados vía PDF: usan "categoria" (árbol grande,
+//     ej. "Materiales Escolares") + "subcategoria" (fino, ej. "Papelería")
+// getCodigoFECE() prueba subcategoria primero, luego categoria.
 // ═══════════════════════════════════════════════════════════
 const MAPEO_FECE = {
-  "Químicos / Desinfección": "240",
-  "Detergentes y Jabones": "270",
-  "Papel e Higiene": "230",
-  "Utensilios de Limpieza": "270",
-  "Bolsas de Basura": "270",
-  "Cestos / Recipientes": "270",
-  "Aromatizantes": "270",
-  "Esponjas y Brillos": "270",
-  "Protección Personal": "270",
-  "Carnes y Aves": "201",
-  "Lácteos": "201",
-  "Granos y Legumbres": "201",
-  "Verduras": "201",
-  "Frutas": "201",
-  "Condimentos": "201",
-  "Snacks": "201",
-  "Papelería": "230",
-  "Útiles de Escritorio": "270",
-  "Mobiliario": "350",
-  "Tecnología": "380",
-  "Balones": "320",
-  "Equipamiento": "320",
-  "Uniformes": "210",
-  "Accesorios Deportivos": "320",
-  "Percusión": "320",
-  "Viento": "320",
-  "Accesorios Musicales": "320"
-  // "Otros Artículos" queda sin mapeo — se asigna manualmente al editar
+  // Alimentos (subcategoria, árbol importados)
+  "Frutas": "201", "Verduras": "201", "Granos y legumbres": "201",
+  "Lácteos": "201", "Carnes y aves": "201", "Condimentos": "201",
+  "Snacks": "201", "Bebidas": "203",
+
+  // Limpieza y Aseo (subcategoria, árbol importados)
+  "Químicos y desinfectantes": "240", "Detergentes y jabones": "270",
+  "Utensilios de limpieza": "270", "Bolsas de basura": "270",
+  "Papel e higiene": "230", "Aromatizantes": "270",
+
+  // Mantenimiento (subcategoria, árbol importados)
+  "Plomería": "250", "Electricidad": "250", "Pintura": "250",
+  "Herramientas": "262", "Jardinería": "262", "Materiales de construcción": "250",
+
+  // Materiales Escolares (subcategoria, árbol importados)
+  "Papelería": "230", "Útiles de escritorio": "270", "Didácticos": "320",
+  "Mobiliario": "350", "Tecnología": "380",
+
+  // Salud y Protección (subcategoria, árbol importados)
+  "Protección personal": "270", "Primeros auxilios": "611", "Higiene personal": "270",
+
+  // Equipos y Servicios (subcategoria, árbol importados)
+  "Aires acondicionados": "370", "Electrónica": "380", "Servicios generales": "169",
+
+  // Implementos Deportivos (subcategoria, árbol importados)
+  "Balones": "320", "Uniformes": "210", "Equipamiento": "320", "Accesorios deportivos": "320",
+
+  // Instrumentos Musicales (subcategoria, árbol importados)
+  "Cuerdas": "320", "Viento": "320", "Percusión": "320", "Accesorios musicales": "320",
+
+  // Categorías PLANAS de BANCO_BASE (data.js) — distintas mayúsculas/nombres
+  "Químicos / Desinfección": "240", "Detergentes y Jabones": "270",
+  "Papel e Higiene": "230", "Utensilios de Limpieza": "270",
+  "Bolsas de Basura": "270", "Cestos / Recipientes": "270",
+  "Esponjas y Brillos": "270", "Protección Personal": "270",
+  "Carnes y Aves": "201", "Granos y Legumbres": "201",
+  "Útiles de Escritorio": "270", "Accesorios Deportivos": "320"
 };
 
 const NOMBRES_FECE = {
@@ -67,8 +81,9 @@ const NOMBRES_FECE = {
   "611": "Donativo a Personas"
 };
 
-function getCodigoFECE(categoria) {
-  return MAPEO_FECE[categoria] || '';
+function getCodigoFECE(item) {
+  if (!item) return '';
+  return MAPEO_FECE[item.subcategoria] || MAPEO_FECE[item.categoria] || '';
 }
 
 // ── ESTADO ──────────────────────────────────────────────────
@@ -707,7 +722,7 @@ async function generateWord() {
         cell(e.item.precio_ref || e.item.precio_unitario
               ? Number(e.item.precio_ref || e.item.precio_unitario).toFixed(2) : '',
               { w: colW[5], align: 'right' }) +
-        cell(getCodigoFECE(e.item.categoria),       { w: colW[6], align: 'center' })
+        cell(getCodigoFECE(e.item),       { w: colW[6], align: 'center' })
       )
     ).join('');
 
@@ -724,7 +739,7 @@ async function generateWord() {
     // ── Resumen agrupado por código de objeto de gasto ────────
     const totalesPorCodigo = {};
     entries.forEach(e => {
-      const cod = getCodigoFECE(e.item.categoria);
+      const cod = getCodigoFECE(e.item);
       const precio = Number(e.item.precio_ref || e.item.precio_unitario || 0);
       const monto = precio * (e.qty || 1);
       const key = cod || 'SIN CLASIFICAR';
