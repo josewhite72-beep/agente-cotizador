@@ -456,7 +456,7 @@ function renderCart() {
   cont.innerHTML = `<div class="cart-table-wrap"><table class="cart-table">
     <thead><tr>
       <th>#</th><th>Código UNSPSC</th><th>Artículo</th>
-      <th>Cant.</th><th>Unidad</th><th>P. Ref. B/.</th><th></th>
+      <th>Cant.</th><th>Unidad</th><th>P. Ref. B/.</th><th>Obj. Gasto</th><th></th>
     </tr></thead><tbody>
     ${entries.map((e,i) => `<tr>
       <td style="color:var(--text3);font-size:11px">${i+1}</td>
@@ -468,9 +468,33 @@ function renderCart() {
           onchange="updUnit('${itemKey(e.item)}',this.value)"></td>
       <td style="font-family:'Space Mono',monospace;font-size:12px;color:var(--green)">
         ${e.item.precio_ref ? 'B/. ' + Number(e.item.precio_ref).toFixed(2) : '—'}</td>
+      <td>${renderSelectObjGasto(e.item, itemKey(e.item))}</td>
       <td><button class="btn-rm" onclick="removeFromCart('${itemKey(e.item)}')">✕</button></td>
     </tr>`).join('')}
     </tbody></table></div>`;
+}
+
+function renderSelectObjGasto(item, key) {
+  const actual = item.objeto_gasto || '';
+  const codigos = Object.keys(NOMBRES_FECE).sort();
+  const opciones = ['<option value="">—</option>']
+    .concat(codigos.map(c => `<option value="${c}" ${c === actual ? 'selected' : ''}>${c}</option>`))
+    .join('');
+  return `<select class="unit-inp" style="width:62px;font-family:'Space Mono',monospace;font-size:11px"
+            onchange="updObjGasto('${key}',this.value)" title="${NOMBRES_FECE[actual] || 'Sin clasificar'}">
+            ${opciones}
+          </select>`;
+}
+
+function updObjGasto(key, val) {
+  if (cart[key]) {
+    cart[key].item.objeto_gasto = val;
+    // Reflejar también en el banco origen si es un artículo importado,
+    // para que la próxima vez que se busque ya venga con el código correcto.
+    const idx = importados.findIndex(i => itemKey(i) === key);
+    if (idx !== -1) importados[idx].objeto_gasto = val;
+    saveImportados();
+  }
 }
 
 function updQty(key, val)  { if (cart[key]) cart[key].qty  = Math.max(1, parseInt(val)||1); }
@@ -590,6 +614,7 @@ async function processPDF(file) {
           precio_unitario: precio,
           categoria:     it.categoria      || 'Otros',
           subcategoria:  it.subcategoria   || 'Sin clasificar',
+          objeto_gasto:  MAPEO_FECE[it.subcategoria] || MAPEO_FECE[it.categoria] || '',
           entidad:       data.entidad      || file.name,
           proceso:       data.proceso      || '',
           fecha:         data.fecha        || '',
