@@ -125,6 +125,51 @@ function clearImportados() {
   toast('🗑 Artículos importados eliminados');
 }
 
+// ── CARGAR JSON CORREGIDO (reemplaza cf_importados) ─────────
+function cargarImportadosJSON(fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch (err) {
+      toast('❌ El archivo no es un JSON válido');
+      fileInput.value = '';
+      return;
+    }
+
+    if (!Array.isArray(data)) {
+      toast('❌ El JSON debe ser un arreglo de artículos');
+      fileInput.value = '';
+      return;
+    }
+
+    const sinCodigo = data.filter(it => !it.codigo || !it.nombre).length;
+    if (sinCodigo > 0) {
+      toast(`⚠️ ${sinCodigo} artículo(s) sin código o nombre — revisa el archivo`);
+    }
+
+    if (!confirm(`¿Reemplazar los ${importados.length} artículos importados actuales con los ${data.length} de este archivo?`)) {
+      fileInput.value = '';
+      return;
+    }
+
+    importados = data;
+    saveImportados();
+    renderStats();
+    toast(`📤 ${data.length} artículos cargados correctamente`);
+    fileInput.value = '';
+  };
+  reader.onerror = () => {
+    toast('❌ Error al leer el archivo');
+    fileInput.value = '';
+  };
+  reader.readAsText(file);
+}
+
 function corregirPrecios() {
   let corregidos = 0;
   importados = importados.map(it => {
