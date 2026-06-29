@@ -738,34 +738,44 @@ async function generateWord() {
 
     // ── Resumen agrupado por código de objeto de gasto ────────
     const totalesPorCodigo = {};
+    const articulosPorCodigo = {};
     entries.forEach(e => {
       const cod = getCodigoFECE(e.item);
       const precio = Number(e.item.precio_ref || e.item.precio_unitario || 0);
       const monto = precio * (e.qty || 1);
       const key = cod || 'SIN CLASIFICAR';
       totalesPorCodigo[key] = (totalesPorCodigo[key] || 0) + monto;
+      if (!articulosPorCodigo[key]) articulosPorCodigo[key] = [];
+      articulosPorCodigo[key].push(`${e.item.nombre} (${e.qty} ${e.unit || ''})`);
     });
 
     const codigosOrdenados = Object.keys(totalesPorCodigo).sort();
-    const colWResumen = [900, 5160, 1400];
+    const colWResumen = [800, 3600, 1000, 1700, 1360];
     const hdrResumen = row(
       cell('Código',  { w: colWResumen[0], bold: true, align: 'center', shade: 'D9D9D9' }) +
       cell('Objeto de Gasto', { w: colWResumen[1], bold: true, align: 'center', shade: 'D9D9D9' }) +
-      cell('Monto B/.', { w: colWResumen[2], bold: true, align: 'center', shade: 'D9D9D9' })
+      cell('Cant.', { w: colWResumen[2], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Artículos incluidos', { w: colWResumen[3], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Monto B/.', { w: colWResumen[4], bold: true, align: 'center', shade: 'D9D9D9' })
     );
     const filasResumen = codigosOrdenados.map(cod => {
       const nombre = cod === 'SIN CLASIFICAR' ? 'Sin clasificar — asignar al editar' : (NOMBRES_FECE[cod] || '');
+      const lista = articulosPorCodigo[cod].join('; ');
       return row(
         cell(cod === 'SIN CLASIFICAR' ? '—' : cod, { w: colWResumen[0], align: 'center' }) +
         cell(nombre, { w: colWResumen[1] }) +
-        cell(totalesPorCodigo[cod].toFixed(2), { w: colWResumen[2], align: 'right' })
+        cell(String(articulosPorCodigo[cod].length), { w: colWResumen[2], align: 'center' }) +
+        cell(lista, { w: colWResumen[3], sz: 7 }) +
+        cell(totalesPorCodigo[cod].toFixed(2), { w: colWResumen[4], align: 'right' })
       );
     }).join('');
     const totalGeneral = Object.values(totalesPorCodigo).reduce((a, v) => a + v, 0);
     const filaTotalResumen = row(
       cell('', { w: colWResumen[0] }) +
       cell('TOTAL', { w: colWResumen[1], bold: true, align: 'right' }) +
-      cell(totalGeneral.toFixed(2), { w: colWResumen[2], bold: true, align: 'right' })
+      cell(String(entries.length), { w: colWResumen[2], bold: true, align: 'center' }) +
+      cell('', { w: colWResumen[3] }) +
+      cell(totalGeneral.toFixed(2), { w: colWResumen[4], bold: true, align: 'right' })
     );
 
     const tWResumen = colWResumen.reduce((a, v) => a + v, 0);
