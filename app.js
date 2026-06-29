@@ -2,6 +2,75 @@
 // CompraFácil – C.E. Barrigón  |  app.js
 // ═══════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════
+// MAPEO CÓDIGO DE OBJETO DE GASTO (FECE) — por categoría
+// Basado en Anexo Nº 1, Manual de Procedimientos FECE (2006)
+// ═══════════════════════════════════════════════════════════
+const MAPEO_FECE = {
+  "Químicos / Desinfección": "240",
+  "Detergentes y Jabones": "270",
+  "Papel e Higiene": "230",
+  "Utensilios de Limpieza": "270",
+  "Bolsas de Basura": "270",
+  "Cestos / Recipientes": "270",
+  "Aromatizantes": "270",
+  "Esponjas y Brillos": "270",
+  "Protección Personal": "270",
+  "Carnes y Aves": "201",
+  "Lácteos": "201",
+  "Granos y Legumbres": "201",
+  "Verduras": "201",
+  "Frutas": "201",
+  "Condimentos": "201",
+  "Snacks": "201",
+  "Papelería": "230",
+  "Útiles de Escritorio": "270",
+  "Mobiliario": "350",
+  "Tecnología": "380",
+  "Balones": "320",
+  "Equipamiento": "320",
+  "Uniformes": "210",
+  "Accesorios Deportivos": "320",
+  "Percusión": "320",
+  "Viento": "320",
+  "Accesorios Musicales": "320"
+  // "Otros Artículos" queda sin mapeo — se asigna manualmente al editar
+};
+
+const NOMBRES_FECE = {
+  "120": "Impresión, Encuadernación y Otros",
+  "130": "Información y Publicidad",
+  "141": "Viático dentro del País",
+  "151": "Transporte dentro del País",
+  "169": "Otros Servicios",
+  "181": "Mantenimiento y Reparación de Edificios",
+  "182": "Mantenimiento de Maquinarias y Otros Equipos",
+  "183": "Mantenimiento de Mobiliario y Equipo de Oficina",
+  "185": "Mantenimiento de Equipo de Computación",
+  "189": "Otros Mantenimientos y Reparaciones",
+  "201": "Alimento para Consumo Humano",
+  "203": "Bebidas",
+  "210": "Textiles y Vestuario",
+  "220": "Combustible y Lubricantes",
+  "230": "Productos de Papel y Cartón",
+  "240": "Productos Químicos y Conexos",
+  "250": "Otros Materiales de Construcción",
+  "262": "Herramientas",
+  "265": "Materiales, Accesorios y Suministros de Computación",
+  "270": "Útiles y Materiales Diversos",
+  "280": "Repuestos",
+  "320": "Equipo Educacional y Recreativo",
+  "340": "Equipo de Oficina",
+  "350": "Mobiliario de Oficina",
+  "370": "Maquinarias y Equipos Varios",
+  "380": "Equipos de Computación",
+  "611": "Donativo a Personas"
+};
+
+function getCodigoFECE(categoria) {
+  return MAPEO_FECE[categoria] || '';
+}
+
 // ── ESTADO ──────────────────────────────────────────────────
 let cart = {};
 let importados = [];
@@ -616,15 +685,16 @@ async function generateWord() {
     const blank = () => `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>`;
 
     // ── Fila encabezado tabla ─────────────────────────────────
-    // Cols: R(460) Cant(1000) Unidad(1300) Código(1260) Descripción(4040) P.Ref(1300)
-    const colW = [460, 1000, 1300, 1260, 4040, 1300];
+    // Cols: R(460) Cant(1000) Unidad(1300) Código(1260) Descripción(3540) P.Ref(1300) FECE(700)
+    const colW = [460, 1000, 1300, 1260, 3540, 1300, 700];
     const hdr = row(
       cell('R',             { w: colW[0], bold: true, align: 'center', shade: 'D9D9D9' }) +
       cell('Cantidad',      { w: colW[1], bold: true, align: 'center', shade: 'D9D9D9' }) +
       cell('Unidad',        { w: colW[2], bold: true, align: 'center', shade: 'D9D9D9' }) +
       cell('Código UNSPSC', { w: colW[3], bold: true, align: 'center', shade: 'D9D9D9' }) +
       cell('Descripción',   { w: colW[4], bold: true, align: 'center', shade: 'D9D9D9' }) +
-      cell('P. Ref. B/.',   { w: colW[5], bold: true, align: 'center', shade: 'D9D9D9' })
+      cell('P. Ref. B/.',   { w: colW[5], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Obj. Gasto',    { w: colW[6], bold: true, align: 'center', shade: 'D9D9D9' })
     );
 
     const itemRowsXml = entries.map(e =>
@@ -636,7 +706,8 @@ async function generateWord() {
         cell(e.item.nombre,                         { w: colW[4] }) +
         cell(e.item.precio_ref || e.item.precio_unitario
               ? Number(e.item.precio_ref || e.item.precio_unitario).toFixed(2) : '',
-              { w: colW[5], align: 'right' })
+              { w: colW[5], align: 'right' }) +
+        cell(getCodigoFECE(e.item.categoria),       { w: colW[6], align: 'center' })
       )
     ).join('');
 
@@ -648,6 +719,48 @@ async function generateWord() {
       </w:tblPr>
       <w:tblGrid>${colW.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>
       ${hdr}${itemRowsXml}
+    </w:tbl>`;
+
+    // ── Resumen agrupado por código de objeto de gasto ────────
+    const totalesPorCodigo = {};
+    entries.forEach(e => {
+      const cod = getCodigoFECE(e.item.categoria);
+      const precio = Number(e.item.precio_ref || e.item.precio_unitario || 0);
+      const monto = precio * (e.qty || 1);
+      const key = cod || 'SIN CLASIFICAR';
+      totalesPorCodigo[key] = (totalesPorCodigo[key] || 0) + monto;
+    });
+
+    const codigosOrdenados = Object.keys(totalesPorCodigo).sort();
+    const colWResumen = [900, 5160, 1400];
+    const hdrResumen = row(
+      cell('Código',  { w: colWResumen[0], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Objeto de Gasto', { w: colWResumen[1], bold: true, align: 'center', shade: 'D9D9D9' }) +
+      cell('Monto B/.', { w: colWResumen[2], bold: true, align: 'center', shade: 'D9D9D9' })
+    );
+    const filasResumen = codigosOrdenados.map(cod => {
+      const nombre = cod === 'SIN CLASIFICAR' ? 'Sin clasificar — asignar al editar' : (NOMBRES_FECE[cod] || '');
+      return row(
+        cell(cod === 'SIN CLASIFICAR' ? '—' : cod, { w: colWResumen[0], align: 'center' }) +
+        cell(nombre, { w: colWResumen[1] }) +
+        cell(totalesPorCodigo[cod].toFixed(2), { w: colWResumen[2], align: 'right' })
+      );
+    }).join('');
+    const totalGeneral = Object.values(totalesPorCodigo).reduce((a, v) => a + v, 0);
+    const filaTotalResumen = row(
+      cell('', { w: colWResumen[0] }) +
+      cell('TOTAL', { w: colWResumen[1], bold: true, align: 'right' }) +
+      cell(totalGeneral.toFixed(2), { w: colWResumen[2], bold: true, align: 'right' })
+    );
+
+    const tWResumen = colWResumen.reduce((a, v) => a + v, 0);
+    const tablaResumen = `<w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="${tWResumen}" w:type="dxa"/>
+        <w:tblLook w:val="0000"/>
+      </w:tblPr>
+      <w:tblGrid>${colWResumen.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>
+      ${hdrResumen}${filasResumen}${filaTotalResumen}
     </w:tbl>`;
 
     // ── Fondo checkmark ──────────────────────────────────────
@@ -685,6 +798,9 @@ async function generateWord() {
   ${tabla}
   ${blank()}
   ${para(run('* Precios de referencia de Cuadros de Cotización PanamaCompra (MEDUCA 2024-2026). Sujetos a variación.', { sz: 8 }), 'left', 0, 60)}
+  ${blank()}
+  ${para(run('RESUMEN POR OBJETO DE GASTO', { bold: true, sz: 11 }), 'left', 0, 60)}
+  ${tablaResumen}
   ${blank()}
   ${para(run('Observación: ', { bold: true }) + run(obs), 'left', 0, 60)}
   ${blank()}${blank()}${blank()}
