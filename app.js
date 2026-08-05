@@ -313,7 +313,7 @@ function getBanco() {
 }
 
 // ── NAVEGACIÓN ──────────────────────────────────────────────
-const NAV_IDS = ['busqueda', 'categorias', 'solicitud', 'precios', 'importar', 'panamacompra', 'gestion'];
+const NAV_IDS = ['busqueda', 'categorias', 'solicitud', 'precios', 'importar', 'panamacompra', 'unspsc', 'gestion'];
 
 function navTo(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -327,6 +327,7 @@ function navTo(id) {
   });
   document.getElementById('panel-' + id).classList.add('active');
   if (id === 'busqueda')   { buildAZ(); buscar(); }
+  if (id === 'unspsc')     { buscarUNSPSC(); }
   if (id === 'categorias') { buildTree(); }
   if (id === 'importar')   { renderStats(); }
   if (id === 'gestion')    { renderGestion(); }
@@ -491,6 +492,90 @@ function renderCart() {
       <td><button class="btn-rm" onclick="removeFromCart('${itemKey(e.item)}')">✕</button></td>
     </tr>`).join('')}
     </tbody></table></div>`;
+}
+
+// ── BUSCADOR UNSPSC ─────────────────────────────────────────
+function buscarUNSPSC() {
+  const q = document.getElementById('unspsc-input').value.trim();
+  const meta = document.getElementById('unspsc-meta');
+  const results = document.getElementById('unspsc-results');
+
+  if (!q) {
+    meta.textContent = '';
+    results.innerHTML = '<div class="no-results" style="padding:20px 0">Escribe palabras clave o un código de 8 dígitos</div>';
+    return;
+  }
+
+  if (!Object.keys(UNSPSC_DATA).length) {
+    meta.textContent = 'Cargando catálogo…';
+    results.innerHTML = '';
+    return;
+  }
+
+  const esCodigoExacto = /^\d{8}$/.test(q);
+
+  if (esCodigoExacto) {
+    // Búsqueda directa por código
+    const nombre = UNSPSC_DATA[q];
+    if (nombre) {
+      meta.innerHTML = `Código <strong>${q}</strong>`;
+      results.innerHTML = renderUNSPSCItem(q, nombre, true);
+    } else {
+      meta.textContent = 'Código no encontrado en el catálogo';
+      results.innerHTML = '';
+    }
+    return;
+  }
+
+  // Búsqueda por palabras clave
+  const palabras = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
+  const hits = [];
+
+  for (const [cod, nombre] of Object.entries(UNSPSC_DATA)) {
+    const nombreNorm = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const score = palabras.filter(p => nombreNorm.includes(p)).length;
+    if (score === palabras.length) hits.push({ cod, nombre, score });
+  }
+
+  hits.sort((a, b) => {
+    // Priorizar coincidencia al inicio del nombre
+    const aNorm = a.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const bNorm = b.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const aStarts = palabras.every(p => aNorm.startsWith(p)) ? 0 : 1;
+    const bStarts = palabras.every(p => bNorm.startsWith(p)) ? 0 : 1;
+    return aStarts - bStarts || a.nombre.localeCompare(b.nombre, 'es');
+  });
+
+  const MAX = 50;
+  meta.innerHTML = `<strong>${hits.length}</strong> resultado${hits.length !== 1 ? 's' : ''}${hits.length > MAX ? ` (mostrando primeros ${MAX})` : ''}`;
+
+  if (!hits.length) {
+    results.innerHTML = '<div class="no-results" style="padding:20px 0">Sin resultados — prueba con otras palabras</div>';
+    return;
+  }
+
+  results.innerHTML = hits.slice(0, MAX).map(h => renderUNSPSCItem(h.cod, h.nombre, false)).join('');
+}
+
+function renderUNSPSCItem(cod, nombre, destacado) {
+  return `<div class="result-card" style="cursor:default;margin-bottom:6px;${destacado ? 'border-color:var(--green)' : ''}"
+              onclick="copiarCodigo('${cod}', this)">
+    <div class="rc-code" style="font-size:13px;font-weight:700;color:var(--primary)">${cod}</div>
+    <div class="rc-name">${nombre}</div>
+    <div class="rc-cat" style="color:var(--text3);font-size:11px">Toca para copiar el código</div>
+  </div>`;
+}
+
+function copiarCodigo(cod, el) {
+  navigator.clipboard.writeText(cod).then(() => {
+    const orig = el.querySelector('.rc-cat').textContent;
+    el.querySelector('.rc-cat').textContent = '✅ Código copiado';
+    el.style.borderColor = 'var(--green)';
+    setTimeout(() => {
+      el.querySelector('.rc-cat').textContent = orig;
+      el.style.borderColor = '';
+    }, 1800);
+  }).catch(() => toast('Código: ' + cod));
 }
 
 function renderSelectObjGasto(item, key) {

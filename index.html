@@ -351,6 +351,7 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
       <button onclick="navTo('precios')">💰 Precios</button>
       <button onclick="navTo('importar')">📥 Importar</button>
       <button onclick="navTo('panamacompra')">🌐 PanamaCompra</button>
+      <button onclick="navTo('unspsc')">🔖 UNSPSC</button>
       <button onclick="navTo('gestion')">⚙️ Categorías</button>
     </nav>
   </div>
@@ -472,9 +473,6 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
       <button class="btn btn-danger" onclick="clearImportados()" style="font-size:12px;padding:7px 14px">🗑 Borrar artículos importados</button>
       <button class="btn btn-orange" onclick="corregirPrecios()" style="font-size:12px;padding:7px 14px">🔧 Corregir precios inflados</button>
       <button class="btn btn-primary" onclick="reclasificarBanco()" style="font-size:12px;padding:7px 14px">🗂 Reclasificar banco</button>
-      <button class="btn btn-green" onclick="exportarImportados()" style="font-size:12px;padding:7px 14px">📥 Exportar importados (JSON)</button>
-      <button class="btn btn-outline" onclick="document.getElementById('json-input').click()" style="font-size:12px;padding:7px 14px">📤 Cargar JSON corregido</button>
-      <input type="file" id="json-input" accept=".json" style="display:none" onchange="cargarImportadosJSON(this)">
     </div>
   </div>
 </div>
@@ -498,6 +496,24 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
       </select>
     </div>
     <div id="pc-links"></div>
+  </div>
+</div>
+
+<!-- ═══════ PANEL UNSPSC ═══════ -->
+<div id="panel-unspsc" class="panel">
+  <div class="page-title">
+    <h2>🔖 Buscador UNSPSC</h2>
+    <p>Busca por palabras clave o por código de 8 dígitos · 51,294 productos en español</p>
+  </div>
+  <div class="card">
+    <div class="main-search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="main-search" type="text" id="unspsc-input"
+             placeholder="Ej: pintura, tinta, baldosas, papel bond, balón…"
+             oninput="buscarUNSPSC()" autocomplete="off">
+    </div>
+    <div class="search-meta" id="unspsc-meta" style="margin-bottom:8px"></div>
+    <div id="unspsc-results" style="max-height:460px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -592,6 +608,10 @@ main { max-width: 1000px; margin: 0 auto; padding: 18px 14px 60px; }
   <button onclick="navTo('panamacompra')">
     <span class="mn-icon">🌐</span>
     <span class="mn-label">Panama</span>
+  </button>
+  <button onclick="navTo('unspsc')">
+    <span class="mn-icon">🔖</span>
+    <span class="mn-label">UNSPSC</span>
   </button>
   <button onclick="navTo('gestion')">
     <span class="mn-icon">⚙️</span>
