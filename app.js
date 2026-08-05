@@ -98,8 +98,9 @@ let activeLetra = 'all';
 let UNSPSC_DATA = {};
 async function loadUNSPSC() {
   try {
-    const res = await fetch('/data/unspsc.json');
-    UNSPSC_DATA = await res.json();
+    const partes = [1,2,3,4,5,6,7].map(n => fetch(`/data/unspsc_${n}.json`).then(r => r.json()));
+    const resultados = await Promise.all(partes);
+    resultados.forEach(parte => Object.assign(UNSPSC_DATA, parte));
     console.log(`UNSPSC cargado: ${Object.keys(UNSPSC_DATA).length} entradas`);
   } catch (e) {
     console.warn('No se pudo cargar el catálogo UNSPSC:', e);
