@@ -94,9 +94,27 @@ let cart = {};
 let importados = [];
 let activeLetra = 'all';
 
+// ── CATÁLOGO UNSPSC ─────────────────────────────────────────
+let UNSPSC_DATA = {};
+async function loadUNSPSC() {
+  try {
+    const res = await fetch('/data/unspsc.json');
+    UNSPSC_DATA = await res.json();
+    console.log(`UNSPSC cargado: ${Object.keys(UNSPSC_DATA).length} entradas`);
+  } catch (e) {
+    console.warn('No se pudo cargar el catálogo UNSPSC:', e);
+  }
+}
+
+function getUNSPSCNombre(codigo) {
+  if (!codigo || !UNSPSC_DATA[codigo]) return '';
+  return UNSPSC_DATA[codigo];
+}
+
 // ── INIT ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadImportados();
+  loadUNSPSC();
   buildAZ();
   renderStats();
   buildPCLinks();
@@ -411,7 +429,7 @@ function buscar() {
       <span class="rc-check">✓</span>
       <div class="rc-code">${it.codigo || '—'}${it.origen === 'importado' ? '<span class="tag-importado">PDF</span>' : ''}</div>
       <div class="rc-name">${it.nombre}</div>
-      <div class="rc-cat">${it.clasificacion || it.categoria}</div>
+      <div class="rc-cat">${getUNSPSCNombre(it.codigo) || it.clasificacion || it.categoria}</div>
       ${it.precio_ref ? `<div class="rc-price">B/. ${Number(it.precio_ref).toFixed(2)}<span style="font-size:10px;font-weight:400;color:var(--text3)"> / ${it.unidad}</span></div>` : '<div class="rc-price" style="color:var(--text3);font-size:11px">Precio no disponible</div>'}
       <div class="rc-source">${it.entidad || ''} ${it.proceso ? '· ' + it.proceso : ''}</div>`;
     div.onclick = () => toggleCart(it, div);
@@ -1188,7 +1206,7 @@ function renderTree() {
         <span class="rc-check">✓</span>
         <div class="rc-code">${it.codigo || '—'}${it.origen === 'importado' ? '<span class="tag-importado">PDF</span>' : ''}</div>
         <div class="rc-name">${it.nombre}</div>
-        <div class="rc-cat">${it.subcategoria || it.clasificacion || it.categoria}</div>
+        <div class="rc-cat">${getUNSPSCNombre(it.codigo) || it.subcategoria || it.clasificacion || it.categoria}</div>
         ${it.precio_ref || it.precio_unitario
           ? `<div class="rc-price">B/. ${Number(it.precio_ref || it.precio_unitario).toFixed(2)}<span style="font-size:10px;font-weight:400;color:var(--text3)"> / ${it.unidad}</span></div>`
           : '<div class="rc-price" style="color:var(--text3);font-size:11px">Precio no disponible</div>'}
