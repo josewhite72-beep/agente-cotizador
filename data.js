@@ -391,5 +391,29 @@ const BANCO_BASE = [
   { codigo:"20122004", clasificacion:"Accesorios de prueba", nombre:"Taco plástico de 1/4 x 1 pulgada color verde", unidad:"Unidad", precio_ref:0.05, categoria:"Eléctrico", objeto_gasto:"254", entidad:"Municipio de Panamá 2026", proceso:"2026-5-76-01-08-CM-000998" },
 ];
 
+  // ── Cielo Raso / Construcción ── Verificado MEDUCA Colón 2026-0-07-03-03-CM-065250 ──
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Lámina de cielo raso de PVC 2x2 decorativo", unidad:"Unidad", precio_ref:1.50, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Tee de 2 pulgadas aluminio para cielo raso", unidad:"Unidad", precio_ref:0.60, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Tee de 12 pulgadas aluminio para cielo raso", unidad:"Unidad", precio_ref:2.95, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Tee de 4 pulgadas aluminio para cielo raso", unidad:"Unidad", precio_ref:0.90, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Ángulo de 12 pulgadas aluminio para cielo raso", unidad:"Unidad", precio_ref:1.95, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Instalación cielorraso suspendido 2x2 lámina yeso y fibra (m²)", unidad:"M²", precio_ref:17.00, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Chiriquí 2026", proceso:"2026-0-07-04-04-CM-055092" },
+  { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Suministro e instalación cielorraso PVC 8 pulgadas estructura metálica (m²)", unidad:"M²", precio_ref:19.60, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Chiriquí 2025", proceso:"2025-0-07-04-04-CM-045618" },
+  { codigo:"80111613", clasificacion:"Mano de obra temporánea", nombre:"Suministro e instalación cielorraso 2x2 estructura aluminio tee principal y secundaria (m²)", unidad:"M²", precio_ref:25.00, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Chiriquí 2026", proceso:"2026-0-07-04-04-CM-064680" },
+
+  // ── Construcción General ── Verificado MEDUCA Colón 2026-0-07-03-03-CM-065250 ──
+  { codigo:"27111701", clasificacion:"Destornilladores", nombre:"Punta de estrella tipo mecha para taladro", unidad:"Unidad", precio_ref:1.50, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"21101513", clasificacion:"Discos", nombre:"Disco de corte 4-1/2 x 7/8 para metal alta calidad", unidad:"Unidad", precio_ref:2.50, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"21101513", clasificacion:"Discos", nombre:"Disco mil hojas 4-1/2 pulgadas grado 60", unidad:"Unidad", precio_ref:4.95, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"23171509", clasificacion:"Soldadura", nombre:"Soldadura 6011 (libra)", unidad:"Libra", precio_ref:1.45, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"46171503", clasificacion:"Juegos de cerraduras", nombre:"Cerradura de soldar de alta seguridad apertura izquierda", unidad:"Unidad", precio_ref:49.00, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"46171503", clasificacion:"Juegos de cerraduras", nombre:"Cerradura de soldar de alta seguridad apertura derecha", unidad:"Unidad", precio_ref:49.00, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"60141302", clasificacion:"Sets de construcción", nombre:"Plywood fenólico 4x8x3/4 pulgadas", unidad:"Unidad", precio_ref:35.00, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"11121610", clasificacion:"Maderas duras", nombre:"Madera de pino 2x4x12 pies", unidad:"Unidad", precio_ref:16.50, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"24141705", clasificacion:"Tubos plegables", nombre:"Tubo galvanizado 2 pulgadas x 5.80 m calibre 40", unidad:"Unidad", precio_ref:40.00, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"26121522", clasificacion:"Alambre desnudo", nombre:"Alambre número 14 (libra)", unidad:"Libra", precio_ref:2.50, categoria:"Eléctrico", objeto_gasto:"254", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+  { codigo:"26121522", clasificacion:"Alambre desnudo", nombre:"Alambre de ciclón calibre 9 de 100 pies (rollo)", unidad:"Rollo", precio_ref:280.72, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
+];
+
 // Categorías únicas
 const CATEGORIAS_BANCO = [...new Set(BANCO_BASE.map(i => i.categoria))];
