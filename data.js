@@ -389,7 +389,7 @@ const BANCO_BASE = [
   { codigo:"30103301", clasificacion:"Moldura de aluminio", nombre:"Moldura eléctrica 20mm x 12mm x 2m con adhesivo", unidad:"Unidad", precio_ref:2.60, categoria:"Eléctrico", objeto_gasto:"254", entidad:"Municipio de Panamá 2026", proceso:"2026-5-76-01-08-CM-000998" },
   { codigo:"23153303", clasificacion:"Brocas o herramientas de moldeado", nombre:"Broca de percusión 1/4 x 6 pulgadas para mampostería", unidad:"Unidad", precio_ref:4.00, categoria:"Eléctrico", objeto_gasto:"254", entidad:"Municipio de Panamá 2026", proceso:"2026-5-76-01-08-CM-000998" },
   { codigo:"20122004", clasificacion:"Accesorios de prueba", nombre:"Taco plástico de 1/4 x 1 pulgada color verde", unidad:"Unidad", precio_ref:0.05, categoria:"Eléctrico", objeto_gasto:"254", entidad:"Municipio de Panamá 2026", proceso:"2026-5-76-01-08-CM-000998" },
-];
+
 
   // ── Cielo Raso / Construcción ── Verificado MEDUCA Colón 2026-0-07-03-03-CM-065250 ──
   { codigo:"30161604", clasificacion:"Sistemas de techo suspendido", nombre:"Lámina de cielo raso de PVC 2x2 decorativo", unidad:"Unidad", precio_ref:1.50, categoria:"Construcción", objeto_gasto:"259", entidad:"MEDUCA Colón 2026", proceso:"2026-0-07-03-03-CM-065250" },
